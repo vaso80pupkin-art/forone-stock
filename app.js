@@ -246,12 +246,14 @@ function openProductModal(productId) {
   if (!product) return;
   selectedProductId = productId;
   const status = getStatus(product);
+  const initialType = activeScanMode === 'check' ? 'check' : activeScanMode;
+  const primaryLabel = initialType === 'check' ? 'Проверить наличие' : 'Добавить в смену';
   $('#productModalContent').innerHTML = `<div class="product-modal-head"><p class="eyebrow">Карточка позиции · Алматы</p><div class="product-code-large" id="productModalTitle">${escapeHtml(product.sku)} <span class="tag">${escapeHtml(product.category)}</span></div><div class="product-name-large">${escapeHtml(product.name)}</div></div>
     <div class="product-status-panel status-${status.key}"><div><div class="status-title">${escapeHtml(status.label)}</div><div class="status-note">${escapeHtml(status.note)}</div></div><div class="product-status-stock"><strong>${Math.max(0, Number(product.stock) || 0)}</strong><span>факт · доступно ${getAvailable(product)}</span><small>резерв ${Number(product.reserved || 0)}</small></div></div>
     <div class="product-facts"><div class="fact"><span>Место хранения</span><strong>${escapeHtml(getLocation(product))}</strong></div><div class="fact"><span>Длина</span><strong>${Number(product.length) >= 4000 ? '4 м · 4000 мм' : '3 м · 3000 мм'}</strong></div><div class="fact"><span>Код сканера</span><strong>${escapeHtml(product.barcode || product.sku)}</strong></div><div class="fact"><span>Срок</span><strong>${status.key === 'green' ? 'Отгрузка' : '25–30 дней'}</strong></div></div>
-    <label class="field-label" for="operationType">Тип операции</label><div class="operation-select-row"><select id="operationType"><option value="check">Проверить наличие</option><option value="in">Приход</option><option value="out">Расход</option><option value="writeoff">Списание на замер</option></select><input class="comment-input" id="operationComment" placeholder="Комментарий, клиент или замер" /></div>
+    <label class="field-label" for="operationType">Тип операции</label><div class="operation-select-row"><select id="operationType"><option value="check" ${initialType === 'check' ? 'selected' : ''}>Проверить наличие</option><option value="in" ${initialType === 'in' ? 'selected' : ''}>Приход</option><option value="out" ${initialType === 'out' ? 'selected' : ''}>Расход</option><option value="writeoff" ${initialType === 'writeoff' ? 'selected' : ''}>Списание на замер</option></select><input class="comment-input" id="operationComment" placeholder="Комментарий, клиент или замер" /></div>
     <label class="field-label" for="operationQty">Количество, шт.</label><div class="quantity-control"><button type="button" id="qtyMinus" aria-label="Уменьшить количество">−</button><input class="quantity-input" id="operationQty" type="number" min="1" inputmode="numeric" value="1" /><button type="button" id="qtyPlus" aria-label="Увеличить количество">+</button></div>
-    <div class="product-primary-row"><button class="secondary-action" type="button" data-close-modal>Отмена</button><button class="primary-action" type="button" id="addOperationBtn"><span>＋</span> Добавить в смену</button></div>`;
+    <div class="product-primary-row"><button class="secondary-action" type="button" data-close-modal>Отмена</button><button class="primary-action" type="button" id="addOperationBtn"><span>${initialType === 'check' ? '⌕' : '＋'}</span> ${primaryLabel}</button></div>`;
   openBackdrop('modalBackdrop');
   $('#qtyMinus').addEventListener('click', () => setQuantity(-1));
   $('#qtyPlus').addEventListener('click', () => setQuantity(1));
@@ -273,7 +275,7 @@ function addOperationFromModal() {
   if (!product || !qty) return;
   if (type === 'check') { closeBackdrop('modalBackdrop'); showToast(`${product.sku}: доступно ${getAvailable(product)} шт. · резерв ${Number(product.reserved || 0)}`); return; }
   if (type !== 'in' && qty > getAvailable(product)) {
-    showToast(`Недостаточно остатка: доступно ${product.stock} шт.`, 'error');
+    showToast(`Недостаточно остатка: доступно ${getAvailable(product)} шт.`, 'error');
     return;
   }
   product.stock = Math.max(0, Number(product.stock || 0) + (type === 'in' ? qty : -qty));
