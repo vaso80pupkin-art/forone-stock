@@ -21,6 +21,9 @@ let activeView = state.activeView || 'scanner';
 let selectedProductId = null;
 let scannerInstance = null;
 let scannerRunning = false;
+let visualTimer = null;
+let visualBusy = false;
+let visualMatched = false;
 let toastTimer = null;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -350,8 +353,73 @@ function findProductByCode(code) {
   return getActiveProducts().find((product) => [product.sku, product.barcode, product.name].some((value) => String(value || '').toLowerCase() === normalized));
 }
 
+function setVisualStatus(message, visible = true) {
+  const status = $('#visualStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle('hidden', !visible);
+}
+
+function stopVisualRecognition() {
+  clearInterval(visualTimer);
+  visualTimer = null;
+  visualBusy = false;
+  setVisualStatus('', false);
+}
+
+function handleVisualMatch(match) {
+  if (!match || visualMatched) return;
+  visualMatched = true;
+  const product = findProductByCode(match.code);
+  closeBackdrop('scannerModal');
+  if (product) {
+    openProductModal(product.id);
+    showToast(`Распознано: ${match.code} · ${match.series || 'панель'}`);
+    return;
+  }
+  openEditor();
+  $('#formSku').value = match.code || '';
+  $('#formName').value = `Бамбуковая панель · ${match.series || 'визуально распознано'}`;
+  $('#formCategory').value = 'Панель';
+  $('#formLength').value = '3000';
+  $('#formStock').value = '0';
+  $('#formBarcode').value = match.code || '';
+  showToast(`Распознано: ${match.code}. Сохраните новую позицию в каталоге.`);
+}
+
+function startVisualRecognition() {
+  stopVisualRecognition();
+  if (!window.PanelVisualMatcher) {
+    setVisualStatus('Визуальное распознавание недоступно — код всё равно можно сканировать.', true);
+    return;
+  }
+  setVisualStatus('Готовлю базу изображений панелей…', true);
+  window.PanelVisualMatcher.prepare((done, total) => {
+    if (scannerRunning) setVisualStatus(`База панелей: ${done} из ${total}`, true);
+  }).then(() => {
+    if (!scannerRunning) return;
+    setVisualStatus('Наведите камеру на код или лицевую поверхность панели', true);
+    visualTimer = setInterval(async () => {
+      if (!scannerRunning || visualBusy || visualMatched) return;
+      const video = $('#reader video');
+      if (!video || video.readyState < 2) return;
+      visualBusy = true;
+      try {
+        const match = await window.PanelVisualMatcher.match(video);
+        if (match && match.confidence >= 52) {
+          await stopScanner();
+          handleVisualMatch(match);
+        }
+      } finally {
+        visualBusy = false;
+      }
+    }, 900);
+  }).catch(() => setVisualStatus('Не удалось подготовить базу изображений. Используйте код панели.', true));
+}
+
 async function startScanner() {
   openBackdrop('scannerModal');
+  visualMatched = false;
   $('#scannerHint').textContent = 'Запрашиваем доступ к камере…';
   if (!window.Html5Qrcode) {
     $('#scannerHint').textContent = 'Библиотека сканирования недоступна. Используйте ввод кода вручную.';
@@ -373,7 +441,8 @@ async function startScanner() {
       }
     }, () => {});
     scannerRunning = true;
-    $('#scannerHint').textContent = 'Наведите рамку на штрих-код или QR-код позиции.';
+    $('#scannerHint').textContent = 'Наведите рамку на код или лицевую поверхность панели.';
+    startVisualRecognition();
   } catch (error) {
     console.warn('Camera scanner error', error);
     $('#scannerHint').textContent = 'Не удалось открыть камеру. Проверьте разрешение или введите код вручную.';
@@ -381,6 +450,7 @@ async function startScanner() {
 }
 
 async function stopScanner() {
+  stopVisualRecognition();
   if (!scannerInstance) return;
   try { if (scannerRunning) await scannerInstance.stop(); scannerInstance.clear(); } catch (error) { console.warn('Scanner stop error', error); }
   scannerRunning = false;

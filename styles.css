@@ -84,3 +84,5 @@ input, select { color: var(--text); }
 
 @media (min-width: 560px) { .main-content { padding-left: 24px; padding-right: 24px; }.topbar { padding-left: 28px; padding-right: 28px; }.hero-scan-card { min-height: 205px; }.hero-scan-card h2 { font-size: 31px; }.metrics-grid { gap: 12px; }.metric-card { padding: 16px; }.status-strip { gap: 10px; }.bottom-nav { padding-left: 80px; padding-right: 80px; } }
 @media (min-width: 720px) { .app-shell { border-left: 1px solid rgba(210, 232, 225, .04); border-right: 1px solid rgba(210, 232, 225, .04); }.modal-backdrop { align-items: center; padding: 24px; }.modal-sheet { border-radius: 26px; max-height: 88vh; }.bottom-nav { bottom: 14px; border: 1px solid var(--line); border-radius: 19px; width: min(470px, calc(100% - 48px)); padding: 7px; }.toast { bottom: 92px; } }
+
+.visual-status { margin: -6px auto 14px; max-width: 300px; border: 1px solid rgba(157, 146, 255, .35); border-radius: 99px; padding: 7px 10px; color: var(--blue); background: var(--blue-bg); font-size: 10px; text-align: center; line-height: 1.35; }
