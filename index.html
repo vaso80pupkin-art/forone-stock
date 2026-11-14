@@ -97,6 +97,7 @@ input, select { color: var(--text); }
 @media (min-width: 720px) { .app-shell { border-left: 1px solid rgba(210, 232, 225, .04); border-right: 1px solid rgba(210, 232, 225, .04); }.modal-backdrop { align-items: center; padding: 24px; }.modal-sheet { border-radius: 26px; max-height: 88vh; }.bottom-nav { bottom: 14px; border: 1px solid var(--line); border-radius: 19px; width: min(470px, calc(100% - 48px)); padding: 7px; }.toast { bottom: 92px; } }
 
 .visual-status { margin: -6px auto 14px; max-width: 300px; border: 1px solid rgba(157, 146, 255, .35); border-radius: 99px; padding: 7px 10px; color: var(--blue); background: var(--blue-bg); font-size: 10px; text-align: center; line-height: 1.35; }
+.scan-suggestion { width: 100%; margin: -4px 0 12px; padding: 12px 14px; border: 1px solid rgba(243, 201, 105, .45); border-radius: 16px; background: linear-gradient(135deg, rgba(243, 201, 105, .16), rgba(157, 146, 255, .12)); color: var(--text); text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }.scan-suggestion .suggestion-kicker { grid-column: 1 / -1; color: var(--accent); font-size: 9px; letter-spacing: .14em; font-weight: 800; }.scan-suggestion strong { font-size: 17px; letter-spacing: -.03em; }.scan-suggestion small { color: var(--muted-strong); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.scan-suggestion b { grid-column: 2; grid-row: 2 / span 2; align-self: center; padding: 9px 10px; border-radius: 10px; background: var(--accent); color: #182023; font-size: 10px; white-space: nowrap; }.scan-suggestion:hover { border-color: var(--accent); transform: translateY(-1px); }
 
   </style>
 </head>
@@ -201,6 +202,7 @@ input, select { color: var(--text); }
       <div class="reader-frame"><div id="reader"></div><div class="reader-corners"></div></div>
       <p class="scanner-hint" id="scannerHint">Наведите рамку на штрих-код или QR-код позиции.</p>
       <p class="visual-status hidden" id="visualStatus"></p>
+      <button class="scan-suggestion hidden" id="scanSuggestion" type="button"><span class="suggestion-kicker">ПРЕДЛОЖЕННЫЙ ВАРИАНТ</span><strong id="suggestionCode">—</strong><small id="suggestionInfo">Наведите камеру на панель</small><b>SCAN · выбрать вариант</b></button>
       <button class="secondary-action full-width" id="manualCodeBtn">Ввести код вручную</button>
     </div>
   </div>
@@ -377,6 +379,7 @@ let scannerRunning = false;
 let visualTimer = null;
 let visualBusy = false;
 let visualMatched = false;
+let pendingScan = null;
 let toastTimer = null;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -720,9 +723,57 @@ function stopVisualRecognition() {
   setVisualStatus('', false);
 }
 
-function handleVisualMatch(match) {
-  if (!match || visualMatched) return;
+function renderScanSuggestion(candidate) {
+  const button = $('#scanSuggestion');
+  if (!button) return;
+  pendingScan = candidate;
+  if (!candidate) {
+    button.classList.add('hidden');
+    return;
+  }
+  const code = candidate.kind === 'code' ? candidate.code : candidate.match.code;
+  const info = candidate.kind === 'code'
+    ? (candidate.product ? `${candidate.product.name} · найдено в каталоге` : 'Код найден, позиции пока нет в каталоге')
+    : `${candidate.match.series || 'Панель'} · совпадение ${candidate.match.confidence}%`;
+  $('#suggestionCode').textContent = code || '—';
+  $('#suggestionInfo').textContent = info;
+  button.classList.remove('hidden');
+}
+
+function handleCodeMatch(code) {
+  const product = findProductByCode(code);
+  closeBackdrop('scannerModal');
+  if (product) {
+    openProductModal(product.id);
+    showToast(`Код подтвержден: ${product.sku}`);
+    return;
+  }
+  openEditor();
+  $('#formSku').value = code || '';
+  $('#formName').value = 'Позиция по коду сканера';
+  $('#formCategory').value = 'Панель';
+  $('#formLength').value = '3000';
+  $('#formStock').value = '0';
+  $('#formBarcode').value = code || '';
+  showToast(`Код ${code} новый — сохраните позицию в каталоге.`);
+}
+
+async function acceptScanSuggestion() {
+  if (!pendingScan) {
+    showToast('Сначала наведите камеру на код или панель', 'error');
+    return;
+  }
+  const candidate = pendingScan;
+  pendingScan = null;
   visualMatched = true;
+  await stopScanner();
+  renderScanSuggestion(null);
+  if (candidate.kind === 'code') handleCodeMatch(candidate.code);
+  else handleVisualMatch(candidate.match);
+}
+
+function handleVisualMatch(match) {
+  if (!match) return;
   const product = findProductByCode(match.code);
   closeBackdrop('scannerModal');
   if (product) {
@@ -760,8 +811,7 @@ function startVisualRecognition() {
       try {
         const match = await window.PanelVisualMatcher.match(video);
         if (match && match.confidence >= 52) {
-          await stopScanner();
-          handleVisualMatch(match);
+          renderScanSuggestion({ kind: 'visual', match });
         }
       } finally {
         visualBusy = false;
@@ -773,6 +823,7 @@ function startVisualRecognition() {
 async function startScanner() {
   openBackdrop('scannerModal');
   visualMatched = false;
+  renderScanSuggestion(null);
   $('#scannerHint').textContent = 'Запрашиваем доступ к камере…';
   if (!window.Html5Qrcode) {
     $('#scannerHint').textContent = 'Библиотека сканирования недоступна. Используйте ввод кода вручную.';
@@ -783,15 +834,8 @@ async function startScanner() {
     scannerInstance = new Html5Qrcode('reader');
     await scannerInstance.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 }, aspectRatio: 1.25 }, async (decodedText) => {
       const product = findProductByCode(decodedText);
-      await stopScanner();
-      closeBackdrop('scannerModal');
-      if (product) {
-        openProductModal(product.id);
-      } else {
-        $('#searchInput').value = decodedText;
-        renderSearchResults();
-        showToast(`Код ${decodedText} не найден в каталоге`, 'error');
-      }
+      if (pendingScan?.kind === 'code' && pendingScan.code === decodedText) return;
+      renderScanSuggestion({ kind: 'code', code: decodedText, product });
     }, () => {});
     scannerRunning = true;
     $('#scannerHint').textContent = 'Наведите рамку на код или лицевую поверхность панели.';
@@ -906,6 +950,7 @@ function initEvents() {
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
+  $('#scanSuggestion').addEventListener('click', acceptScanSuggestion);
   $('#manualCodeBtn').addEventListener('click', manualCodeLookup);
   $('#searchInput').addEventListener('input', renderSearchResults);
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });

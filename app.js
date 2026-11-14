@@ -24,6 +24,7 @@ let scannerRunning = false;
 let visualTimer = null;
 let visualBusy = false;
 let visualMatched = false;
+let pendingScan = null;
 let toastTimer = null;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -367,9 +368,57 @@ function stopVisualRecognition() {
   setVisualStatus('', false);
 }
 
-function handleVisualMatch(match) {
-  if (!match || visualMatched) return;
+function renderScanSuggestion(candidate) {
+  const button = $('#scanSuggestion');
+  if (!button) return;
+  pendingScan = candidate;
+  if (!candidate) {
+    button.classList.add('hidden');
+    return;
+  }
+  const code = candidate.kind === 'code' ? candidate.code : candidate.match.code;
+  const info = candidate.kind === 'code'
+    ? (candidate.product ? `${candidate.product.name} · найдено в каталоге` : 'Код найден, позиции пока нет в каталоге')
+    : `${candidate.match.series || 'Панель'} · совпадение ${candidate.match.confidence}%`;
+  $('#suggestionCode').textContent = code || '—';
+  $('#suggestionInfo').textContent = info;
+  button.classList.remove('hidden');
+}
+
+function handleCodeMatch(code) {
+  const product = findProductByCode(code);
+  closeBackdrop('scannerModal');
+  if (product) {
+    openProductModal(product.id);
+    showToast(`Код подтвержден: ${product.sku}`);
+    return;
+  }
+  openEditor();
+  $('#formSku').value = code || '';
+  $('#formName').value = 'Позиция по коду сканера';
+  $('#formCategory').value = 'Панель';
+  $('#formLength').value = '3000';
+  $('#formStock').value = '0';
+  $('#formBarcode').value = code || '';
+  showToast(`Код ${code} новый — сохраните позицию в каталоге.`);
+}
+
+async function acceptScanSuggestion() {
+  if (!pendingScan) {
+    showToast('Сначала наведите камеру на код или панель', 'error');
+    return;
+  }
+  const candidate = pendingScan;
+  pendingScan = null;
   visualMatched = true;
+  await stopScanner();
+  renderScanSuggestion(null);
+  if (candidate.kind === 'code') handleCodeMatch(candidate.code);
+  else handleVisualMatch(candidate.match);
+}
+
+function handleVisualMatch(match) {
+  if (!match) return;
   const product = findProductByCode(match.code);
   closeBackdrop('scannerModal');
   if (product) {
@@ -407,8 +456,7 @@ function startVisualRecognition() {
       try {
         const match = await window.PanelVisualMatcher.match(video);
         if (match && match.confidence >= 52) {
-          await stopScanner();
-          handleVisualMatch(match);
+          renderScanSuggestion({ kind: 'visual', match });
         }
       } finally {
         visualBusy = false;
@@ -420,6 +468,7 @@ function startVisualRecognition() {
 async function startScanner() {
   openBackdrop('scannerModal');
   visualMatched = false;
+  renderScanSuggestion(null);
   $('#scannerHint').textContent = 'Запрашиваем доступ к камере…';
   if (!window.Html5Qrcode) {
     $('#scannerHint').textContent = 'Библиотека сканирования недоступна. Используйте ввод кода вручную.';
@@ -430,15 +479,8 @@ async function startScanner() {
     scannerInstance = new Html5Qrcode('reader');
     await scannerInstance.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 }, aspectRatio: 1.25 }, async (decodedText) => {
       const product = findProductByCode(decodedText);
-      await stopScanner();
-      closeBackdrop('scannerModal');
-      if (product) {
-        openProductModal(product.id);
-      } else {
-        $('#searchInput').value = decodedText;
-        renderSearchResults();
-        showToast(`Код ${decodedText} не найден в каталоге`, 'error');
-      }
+      if (pendingScan?.kind === 'code' && pendingScan.code === decodedText) return;
+      renderScanSuggestion({ kind: 'code', code: decodedText, product });
     }, () => {});
     scannerRunning = true;
     $('#scannerHint').textContent = 'Наведите рамку на код или лицевую поверхность панели.';
@@ -553,6 +595,7 @@ function initEvents() {
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
+  $('#scanSuggestion').addEventListener('click', acceptScanSuggestion);
   $('#manualCodeBtn').addEventListener('click', manualCodeLookup);
   $('#searchInput').addEventListener('input', renderSearchResults);
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });
