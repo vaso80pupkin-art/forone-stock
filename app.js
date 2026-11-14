@@ -30,6 +30,7 @@ let torchEnabled = false;
 let torchTrack = null;
 let toastTimer = null;
 let activeScanMode = 'check';
+const scanModeHelp = { check: 'Только покажет остаток. Количество на складе не изменится.', in: 'Добавит поступившее количество к фактическому остатку.', out: 'Уменьшит остаток. Нельзя списать больше, чем доступно без резерва.', writeoff: 'Уменьшит остаток и запишет списание товара на замер.' };
 let catalogQuickFilter = 'all';
 let catalogFilters = { length: 'all', availability: 'all', status: 'active' };
 let cameraZoom = 1;
@@ -777,7 +778,8 @@ function initEvents() {
   ['lengthFilter', 'availabilityFilter', 'statusFilter'].forEach((id) => $(`#${id}`).addEventListener('change', (event) => { catalogFilters[id.replace('Filter', '')] = event.target.value; catalogQuickFilter = 'all'; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all')); renderCatalog(); }));
   $('#resetFiltersBtn').addEventListener('click', () => { catalogFilters = { length: 'all', availability: 'all', status: 'active' }; catalogQuickFilter = 'all'; $('#catalogSearch').value = ''; $('#categoryFilter').value = 'all'; ['lengthFilter','availabilityFilter','statusFilter'].forEach((id) => { $(`#${id}`).value = id === 'statusFilter' ? 'active' : 'all'; }); $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all')); renderCatalog(); });
   $('#quickFilters').addEventListener('click', (event) => { const button = event.target.closest('[data-filter]'); if (!button) return; const key = button.dataset.filter; catalogQuickFilter = key; if (key === 'all') { catalogFilters = { length: 'all', availability: 'all', status: 'active' }; $('#categoryFilter').value = 'all'; } if (key !== 'louvers' && key !== 'all') $('#categoryFilter').value = 'all'; if (key === 'out' || key === 'low') catalogFilters.availability = key; if (key === '4m') catalogFilters.length = '4000'; if (key === 'louvers') $('#categoryFilter').value = 'Лувер'; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item === button)); ['lengthFilter','availabilityFilter','statusFilter'].forEach((id) => { const keyName = id.replace('Filter', ''); if ($(`#${id}`)) $(`#${id}`).value = catalogFilters[keyName]; }); renderCatalog(); });
-  $$('.scan-mode').forEach((button) => button.addEventListener('click', () => { activeScanMode = button.dataset.scanMode; $$('.scan-mode').forEach((item) => item.classList.toggle('active', item === button)); showToast(`Режим: ${button.textContent}`); }));
+  $$('.scan-mode').forEach((button) => button.addEventListener('click', () => { activeScanMode = button.dataset.scanMode; $$('.scan-mode').forEach((item) => item.classList.toggle('active', item === button)); $('#scanModeHelp').textContent = scanModeHelp[activeScanMode]; showToast(`Режим: ${button.textContent}`); }));
+  $('#scanModeHelp').textContent = scanModeHelp[activeScanMode];
   $('#catalogList').addEventListener('click', handleCatalogClick);
   $('#catalogList').addEventListener('change', handleCatalogStockInput);
   $('#addProductBtn').addEventListener('click', () => openEditor());
