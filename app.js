@@ -31,6 +31,7 @@ let torchTrack = null;
 let toastTimer = null;
 let activeScanMode = 'check';
 let catalogQuickFilter = 'all';
+let catalogFilters = { length: 'all', availability: 'all', status: 'active' };
 let cameraZoom = 1;
 let enhanceCamera = true;
 let pendingImport = null;
@@ -162,11 +163,18 @@ function renderCatalog() {
   const products = state.products.filter((product) => {
     const haystack = `${product.sku} ${product.name} ${product.category}`.toLowerCase();
     const status = getStatus(product).key;
+    const available = getAvailable(product);
     const quick = catalogQuickFilter;
-    const quickOk = quick === 'all' || (quick === 'out' && status === 'red') || (quick === 'low' && status === 'yellow') || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
-    return !product.retired && quickOk && (category === 'all' || product.category === category) && (!query || haystack.includes(query));
+    const quickOk = quick === 'all' || (quick === 'out' && available === 0) || (quick === 'low' && available > 0 && available <= 10) || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
+    const lengthOk = catalogFilters.length === 'all' || Number(product.length) === Number(catalogFilters.length);
+    const availabilityOk = catalogFilters.availability === 'all' || (catalogFilters.availability === 'in' && available > 10) || (catalogFilters.availability === 'low' && available > 0 && available <= 10) || (catalogFilters.availability === 'out' && available === 0);
+    const statusOk = catalogFilters.status === 'all' || (catalogFilters.status === 'active' && !product.retired) || (catalogFilters.status === 'order' && !product.retired && (product.orderOnly || Number(product.length) >= 4000)) || (catalogFilters.status === 'reserved' && !product.retired && Number(product.reserved || 0) > 0) || (catalogFilters.status === 'archived' && Boolean(product.retired));
+    return quickOk && lengthOk && availabilityOk && statusOk && (category === 'all' || product.category === category) && (!query || haystack.includes(query));
   }).sort((a, b) => a.sku.localeCompare(b.sku, 'ru'));
   $('#catalogSummary').textContent = `${products.length} ${pluralize(products.length, 'позиция', 'позиции', 'позиций')}`;
+  const filterActive = catalogFilters.length !== 'all' || catalogFilters.availability !== 'all' || catalogFilters.status !== 'active' || catalogQuickFilter !== 'all' || category !== 'all' || Boolean(query);
+  $('#resetFiltersBtn')?.classList.toggle('hidden', !filterActive);
+  if ($('#filterSummary')) { const labels = []; if (catalogFilters.length !== 'all') labels.push(catalogFilters.length === '4000' ? '4 м' : '3 м'); if (catalogFilters.availability !== 'all') labels.push({ in: 'В наличии', low: 'Мало', out: 'Нет' }[catalogFilters.availability]); if (catalogFilters.status !== 'active') labels.push({ all: 'Все статусы', order: 'Под заказ', reserved: 'С резервом', archived: 'Архив' }[catalogFilters.status]); $('#filterSummary').textContent = labels.length ? `Фильтры: ${labels.join(' · ')}` : ''; $('#filterSummary').classList.toggle('hidden', labels.length === 0); }
   if (!products.length) {
     $('#catalogList').innerHTML = `<div class="empty-state"><div class="empty-icon">⌕</div><strong>Ничего не найдено</strong>Измените фильтр или добавьте новую позицию.</div>`;
     return;
@@ -764,8 +772,10 @@ function initEvents() {
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });
   $('#searchResults').addEventListener('click', (event) => { const result = event.target.closest('[data-search-product]'); if (result) { $('#searchResults').classList.add('hidden'); openProductModal(result.dataset.searchProduct); } });
   $('#catalogSearch').addEventListener('input', renderCatalog);
-  $('#categoryFilter').addEventListener('change', renderCatalog);
-  $('#quickFilters').addEventListener('click', (event) => { const button = event.target.closest('[data-filter]'); if (!button) return; catalogQuickFilter = button.dataset.filter; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item === button)); renderCatalog(); });
+  $('#categoryFilter').addEventListener('change', () => { catalogQuickFilter = 'all'; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all')); renderCatalog(); });
+  ['lengthFilter', 'availabilityFilter', 'statusFilter'].forEach((id) => $(`#${id}`).addEventListener('change', (event) => { catalogFilters[id.replace('Filter', '')] = event.target.value; catalogQuickFilter = 'all'; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all')); renderCatalog(); }));
+  $('#resetFiltersBtn').addEventListener('click', () => { catalogFilters = { length: 'all', availability: 'all', status: 'active' }; catalogQuickFilter = 'all'; $('#catalogSearch').value = ''; $('#categoryFilter').value = 'all'; ['lengthFilter','availabilityFilter','statusFilter'].forEach((id) => { $(`#${id}`).value = id === 'statusFilter' ? 'active' : 'all'; }); $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all')); renderCatalog(); });
+  $('#quickFilters').addEventListener('click', (event) => { const button = event.target.closest('[data-filter]'); if (!button) return; const key = button.dataset.filter; catalogQuickFilter = key; if (key === 'all') { catalogFilters = { length: 'all', availability: 'all', status: 'active' }; $('#categoryFilter').value = 'all'; } if (key !== 'louvers' && key !== 'all') $('#categoryFilter').value = 'all'; if (key === 'out' || key === 'low') catalogFilters.availability = key; if (key === '4m') catalogFilters.length = '4000'; if (key === 'louvers') $('#categoryFilter').value = 'Лувер'; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item === button)); ['lengthFilter','availabilityFilter','statusFilter'].forEach((id) => { const keyName = id.replace('Filter', ''); if ($(`#${id}`)) $(`#${id}`).value = catalogFilters[keyName]; }); renderCatalog(); });
   $$('.scan-mode').forEach((button) => button.addEventListener('click', () => { activeScanMode = button.dataset.scanMode; $$('.scan-mode').forEach((item) => item.classList.toggle('active', item === button)); showToast(`Режим: ${button.textContent}`); }));
   $('#catalogList').addEventListener('click', handleCatalogClick);
   $('#catalogList').addEventListener('change', handleCatalogStockInput);

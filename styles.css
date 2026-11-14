@@ -112,3 +112,7 @@ input, select { color: var(--text); }
   .scan-modes{position:relative;left:auto;right:auto;bottom:auto;margin-top:16px}
   .scan-action{position:relative;left:auto;right:auto;bottom:auto;width:100%;margin-top:10px}
 }
+
+/* extended catalog filters */
+.advanced-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px;padding:10px;border:1px solid var(--line);border-radius:14px;background:rgba(17,35,40,.62)}.advanced-filters label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:9px;font-weight:800}.advanced-filters select{width:100%;min-height:40px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);color:var(--text);padding:0 7px;font-size:10px}.reset-filters{grid-column:1/-1;min-height:32px;border-radius:9px;background:transparent;color:var(--accent);font-size:10px;font-weight:800}.filter-summary{margin:8px 3px 0;color:var(--accent);font-size:10px}
+@media(max-width:360px){.advanced-filters{padding:8px 6px;gap:5px}.advanced-filters select{font-size:9px;padding:0 4px}}

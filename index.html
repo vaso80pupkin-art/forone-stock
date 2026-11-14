@@ -82,6 +82,13 @@
         <div class="quick-filters" id="quickFilters" aria-label="Быстрые фильтры">
           <button class="quick-filter active" data-filter="all">Все</button><button class="quick-filter" data-filter="out">Нет в наличии</button><button class="quick-filter" data-filter="low">Мало</button><button class="quick-filter" data-filter="4m">Панели 4 м</button><button class="quick-filter" data-filter="louvers">Луверы</button><button class="quick-filter" data-filter="recent">Недавно изменённые</button>
         </div>
+        <div class="advanced-filters" id="advancedFilters" aria-label="Расширенные фильтры">
+          <label>Длина<select id="lengthFilter"><option value="all">Любая длина</option><option value="3000">3 м · 3000 мм</option><option value="4000">4 м · 4000 мм</option></select></label>
+          <label>Наличие<select id="availabilityFilter"><option value="all">Любое</option><option value="in">В наличии</option><option value="low">Мало</option><option value="out">Нет</option></select></label>
+          <label>Статус<select id="statusFilter"><option value="active">Активные</option><option value="all">Все позиции</option><option value="order">Под заказ</option><option value="reserved">С резервом</option><option value="archived">Архив</option></select></label>
+          <button class="reset-filters hidden" id="resetFiltersBtn" type="button">Сбросить расширенные фильтры</button>
+        </div>
+        <p class="filter-summary hidden" id="filterSummary"></p>
         <div class="catalog-summary"><span id="catalogSummary">0 позиций</span><span class="catalog-sort-label">по алфавиту <span>↕</span></span></div>
         <div class="catalog-list" id="catalogList"></div>
       </section>
