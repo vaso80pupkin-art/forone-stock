@@ -45,14 +45,14 @@ function loadState() {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (stored && Array.isArray(stored.products) && Array.isArray(stored.operations)) {
       stored.products = stored.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product, reserved: Math.min(Math.max(0, Number(product.reserved) || 0), Math.max(0, Number(product.stock) || 0)) }));
-      stored.source = { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleAutoConfigured: false, ...(stored.source || {}) };
+      stored.source = { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleLastFetch: 0, googleAutoConfigured: false, ...(stored.source || {}) };
       if (!stored.source.googleAutoConfigured) { stored.source.googleEnabled = true; stored.source.googleAutoConfigured = true; }
       return stored;
     }
   } catch (error) {
     console.warn('Не удалось прочитать локальную базу', error);
   }
-  return { products: seedProducts.map((product) => ({ ...product, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '' })), operations: [], activeView: 'scanner', source: { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleAutoConfigured: true } };
+  return { products: seedProducts.map((product) => ({ ...product, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '' })), operations: [], activeView: 'scanner', source: { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleLastFetch: 0, googleAutoConfigured: true } };
 }
 
 function saveState() {
@@ -114,7 +114,15 @@ function updateConnectionLabel() {
     label.textContent = navigator.onLine ? 'Онлайн · сохранение ещё не создано' : 'Офлайн · проверьте сохранение';
     return;
   }
-  label.textContent = navigator.onLine ? 'Онлайн · локально сохранено' : 'Офлайн · локально сохранено';
+  const googleSync = state.source?.googleEnabled;
+  if (googleSync && state.source?.googleLastSync) {
+    const time = new Date(state.source.googleLastSync).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    label.textContent = `${navigator.onLine ? 'Онлайн' : 'Офлайн'} · Google ${time}`;
+  } else if (googleSync) {
+    label.textContent = navigator.onLine ? 'Онлайн · Google включён' : 'Офлайн · Google ожидает сеть';
+  } else {
+    label.textContent = navigator.onLine ? 'Онлайн · локально сохранено' : 'Офлайн · локально сохранено';
+  }
 }
 
 function renderHeader() {
@@ -705,10 +713,10 @@ function inspectInventorySheet(sheet) {
 }
 
 function getGoogleSheetId(value) { const match = String(value || '').match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/); return match ? match[1] : ''; }
-function updateGoogleSyncUI() { const source = state.source || {}; const url = $('#googleSheetUrl'); const toggle = $('#googleAutoSync'); const status = $('#googleSyncStatus'); if (url) url.value = source.googleUrl || DEFAULT_GOOGLE_SHEET_URL; if (toggle) toggle.checked = Boolean(source.googleEnabled); if (status) status.textContent = source.googleLastSync ? `Последнее обновление: ${formatDate(source.googleLastSync, true)} · ${source.googleSheet || 'лист выбран не задан'}` : 'Источник не подключён'; }
+function updateGoogleSyncUI() { const source = state.source || {}; const url = $('#googleSheetUrl'); const toggle = $('#googleAutoSync'); const status = $('#googleSyncStatus'); if (url) url.value = source.googleUrl || DEFAULT_GOOGLE_SHEET_URL; if (toggle) toggle.checked = Boolean(source.googleEnabled); if (status) status.textContent = source.googleLastSync ? `Последнее применение: ${formatDate(source.googleLastSync, true)} · лист «${source.googleSheet || 'не выбран'}»` : source.googleLastFetch ? `Книга загружена: ${formatDate(source.googleLastFetch, true)} · ожидает подтверждения` : source.googleEnabled ? 'Автосинхронизация включена · первая загрузка ожидается' : 'Источник не подключён'; }
 function googleCandidateSort(a, b) { const excluded = /заказ|статист|аналит|отгруз|брак|цены|ассортимент|исток|факт|лист/i; const preferred = /остат|налич|октябрь|ноябрь|декабрь|сентябрь|август|июль|июнь|май|март|февраль|новая/i; const exact = (state.source?.googleSheet && a.name.trim() === state.source.googleSheet) ? -1000 : 0; const ax = excluded.test(a.name) ? 100 : 0, bx = excluded.test(b.name) ? 100 : 0; const ap = preferred.test(a.name) ? -20 : 0, bp = preferred.test(b.name) ? -20 : 0; return (exact + ax + ap + a.order / 10000) - (bx + bp + b.order / 10000); }
 function openImportPreviewForCandidates(candidates, source = 'excel') { pendingImport = { candidates, source }; const options = candidates.slice(0, 20).map((candidate, index) => `<option value="${index}">${escapeHtml(candidate.name)} · ${candidate.rows.length} строк</option>`).join(''); $('#importPreviewContent').innerHTML = `<label class="field-label">Лист с остатками<select id="previewSheetSelect" class="preview-select">${options}</select></label><div id="importPreviewStats" class="import-preview-stats"></div><div class="import-preview-table-wrap"><table class="import-preview-table"><thead><tr><th>Артикул</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="importPreviewRows"></tbody></table></div>`; $('#previewSheetSelect').addEventListener('change', renderImportPreviewDetails); const preferredIndex = Math.max(0, candidates.findIndex((candidate) => state.source?.googleSheet && candidate.name.trim() === state.source.googleSheet)); $('#previewSheetSelect').value = String(preferredIndex); renderImportPreviewDetails(); openBackdrop('importPreviewModal'); }
-async function syncGoogleSheet(force = true) { const url = $('#googleSheetUrl')?.value.trim() || state.source?.googleUrl || DEFAULT_GOOGLE_SHEET_URL; const id = getGoogleSheetId(url); if (!id) { showToast('Вставьте корректную ссылку Google Sheets', 'error'); return; } const autoToggle = $('#googleAutoSync'); state.source = { googleUrl: url, googleEnabled: autoToggle ? autoToggle.checked : (state.source?.googleEnabled ?? true), googleSheet: state.source?.googleSheet || 'Октябрь-Ноябрь', googleLastSync: state.source?.googleLastSync || 0, googleApproved: Boolean(state.source?.googleApproved), googleAutoConfigured: true }; if (!force && state.source.googleLastSync && Date.now() - state.source.googleLastSync < 15 * 60 * 1000) return; const status = $('#googleSyncStatus'); if (status) status.textContent = 'Загружаю книгу…'; try { const response = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`, { cache: 'no-store' }); if (!response.ok) throw new Error(`HTTP ${response.status}`); const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' }); const candidates = workbook.SheetNames.map((name, order) => ({ name, order, ...inspectInventorySheet(workbook.Sheets[name]) })).filter((candidate) => candidate.rows.length).sort((a, b) => b.score - a.score || googleCandidateSort(a, b)); if (!candidates.length) throw new Error('no inventory sheets'); state.source.googleUrl = url; state.source.googleLastSync = Date.now(); saveState(); updateGoogleSyncUI(); const preferredIndex = Math.max(0, candidates.findIndex((candidate) => candidate.name.trim() === state.source.googleSheet)); if (!force && state.source.googleApproved) { pendingImport = { candidates, source: 'google', autoRows: candidates[preferredIndex].rows }; confirmImport(); return; } openImportPreviewForCandidates(candidates, 'google'); } catch (error) { console.error(error); if (status) status.textContent = 'Не удалось загрузить таблицу'; showToast('Google Sheets недоступна для чтения. Проверьте общий доступ.', 'error'); } }
+async function syncGoogleSheet(force = true) { const url = $('#googleSheetUrl')?.value.trim() || state.source?.googleUrl || DEFAULT_GOOGLE_SHEET_URL; const id = getGoogleSheetId(url); if (!id) { showToast('Вставьте корректную ссылку Google Sheets', 'error'); return; } const autoToggle = $('#googleAutoSync'); state.source = { googleUrl: url, googleEnabled: autoToggle ? autoToggle.checked : (state.source?.googleEnabled ?? true), googleSheet: state.source?.googleSheet || 'Октябрь-Ноябрь', googleLastSync: state.source?.googleLastSync || 0, googleLastFetch: state.source?.googleLastFetch || 0, googleApproved: Boolean(state.source?.googleApproved), googleAutoConfigured: true }; if (!force && state.source.googleLastFetch && Date.now() - state.source.googleLastFetch < 15 * 60 * 1000) return; const status = $('#googleSyncStatus'); if (status) status.textContent = 'Загружаю книгу…'; try { const response = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`, { cache: 'no-store' }); if (!response.ok) throw new Error(`HTTP ${response.status}`); const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' }); const candidates = workbook.SheetNames.map((name, order) => ({ name, order, ...inspectInventorySheet(workbook.Sheets[name]) })).filter((candidate) => candidate.rows.length).sort((a, b) => b.score - a.score || googleCandidateSort(a, b)); if (!candidates.length) throw new Error('no inventory sheets'); state.source.googleUrl = url; state.source.googleLastFetch = Date.now(); saveState(); updateGoogleSyncUI(); const preferredIndex = Math.max(0, candidates.findIndex((candidate) => candidate.name.trim() === state.source.googleSheet)); if (!force && state.source.googleApproved) { pendingImport = { candidates, source: 'google', autoRows: candidates[preferredIndex].rows }; confirmImport(); return; } openImportPreviewForCandidates(candidates, 'google'); } catch (error) { console.error(error); if (status) status.textContent = 'Не удалось загрузить таблицу'; showToast('Google Sheets недоступна для чтения. Проверьте общий доступ.', 'error'); } }
 
 async function importExcel(file) {
   if (!file) return;
@@ -758,7 +766,7 @@ function clearOperations() {
 
 function downloadJson(filename, payload) { const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
 function saveBackup() { downloadJson(`FORONE_база_${formatDate(Date.now()).replaceAll('.', '-')}.json`, { version: 2, exportedAt: new Date().toISOString(), state }); showToast('Резервная копия сохранена'); }
-function restoreBackup(file) { if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!data?.state?.products || !Array.isArray(data.state.operations)) throw new Error('invalid'); if (!confirm('Заменить локальную базу данными из файла?')) return; state = { ...data.state, products: data.state.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product })), source: { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleAutoConfigured: true, ...(data.state.source || {}) } }; saveState(); renderAll(); showToast('База восстановлена'); } catch (_) { showToast('Файл резервной копии повреждён', 'error'); } }; reader.readAsText(file); }
+function restoreBackup(file) { if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!data?.state?.products || !Array.isArray(data.state.operations)) throw new Error('invalid'); if (!confirm('Заменить локальную базу данными из файла?')) return; state = { ...data.state, products: data.state.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product })), source: { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleLastFetch: 0, googleAutoConfigured: true, ...(data.state.source || {}) } }; saveState(); renderAll(); showToast('База восстановлена'); } catch (_) { showToast('Файл резервной копии повреждён', 'error'); } }; reader.readAsText(file); }
 async function shareBackup() { const payload = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), state }, null, 2); const file = new File([payload], 'FORONE-база.json', { type: 'application/json' }); if (navigator.share && navigator.canShare?.({ files: [file] })) { await navigator.share({ title: 'FORONE база', text: 'Резервная копия складской базы', files: [file] }); } else { saveBackup(); showToast('Файл скачан — отправьте его на другой телефон'); } }
 
 const buttonHelpById = {
@@ -799,13 +807,29 @@ function initButtonHints() {
     button.addEventListener('pointerleave', () => button.classList.remove('tooltip-visible'));
     button.addEventListener('pointerdown', () => button.classList.remove('tooltip-visible'));
   });
+  const globalTooltip = $('#globalTooltip');
+  const hidePenTooltip = () => { if (!globalTooltip) return; globalTooltip.classList.remove('visible'); globalTooltip.setAttribute('aria-hidden', 'true'); };
+  const showPenTooltip = (target) => {
+    if (!globalTooltip || !target) return;
+    globalTooltip.textContent = target.dataset.tooltip;
+    globalTooltip.classList.add('visible');
+    globalTooltip.setAttribute('aria-hidden', 'false');
+    const rect = target.getBoundingClientRect();
+    globalTooltip.style.left = `${Math.min(Math.max(8, rect.left + rect.width / 2 - 120), window.innerWidth - 248)}px`;
+    globalTooltip.style.top = `${Math.min(window.innerHeight - 58, rect.bottom + 10)}px`;
+    requestAnimationFrame(() => {
+      if (globalTooltip.getBoundingClientRect().bottom > window.innerHeight - 8) globalTooltip.style.top = `${Math.max(8, rect.top - globalTooltip.offsetHeight - 10)}px`;
+    });
+  };
   document.addEventListener('pointermove', (event) => {
     if (event.pointerType !== 'pen') return;
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('button[data-tooltip]');
     $$('button.tooltip-visible').forEach((button) => { if (button !== target) button.classList.remove('tooltip-visible'); });
-    if (target) target.classList.add('tooltip-visible');
+    if (target) { target.classList.add('tooltip-visible'); showPenTooltip(target); } else hidePenTooltip();
   });
-  document.addEventListener('pointerleave', (event) => { if (event.pointerType === 'pen') $$('button.tooltip-visible').forEach((button) => button.classList.remove('tooltip-visible')); });
+  document.addEventListener('pointerleave', (event) => { if (event.pointerType === 'pen') { $$('button.tooltip-visible').forEach((button) => button.classList.remove('tooltip-visible')); hidePenTooltip(); } });
+  document.addEventListener('pointerdown', hidePenTooltip);
+  window.addEventListener('blur', hidePenTooltip);
 }
 
 function initEvents() {
@@ -837,7 +861,7 @@ function initEvents() {
   $('#confirmImportBtn').addEventListener('click', confirmImport); $('#closeImportPreview').addEventListener('click', () => closeBackdrop('importPreviewModal')); $('#cancelImportBtn').addEventListener('click', () => closeBackdrop('importPreviewModal'));
   $('#exportBtn').addEventListener('click', exportExcel);
   $('#clearOperationsBtn').addEventListener('click', clearOperations);
-  $('#openSettingsBtn').addEventListener('click', () => { updateGoogleSyncUI(); openBackdrop('infoModal'); }); $('#syncGoogleBtn').addEventListener('click', () => syncGoogleSheet(true)); $('#googleAutoSync').addEventListener('change', (event) => { state.source.googleEnabled = event.target.checked; state.source.googleAutoConfigured = true; state.source.googleUrl = $('#googleSheetUrl').value.trim() || DEFAULT_GOOGLE_SHEET_URL; saveState(); if (event.target.checked) syncGoogleSheet(false); }); $('#googleSheetUrl').addEventListener('change', (event) => { state.source.googleUrl = event.target.value.trim() || DEFAULT_GOOGLE_SHEET_URL; saveState(); }); $('#openBackupBtn').addEventListener('click', () => { closeBackdrop('infoModal'); openBackdrop('backupModal'); }); $('[data-close-backup]').addEventListener('click', () => closeBackdrop('backupModal')); $('#backupSaveBtn').addEventListener('click', saveBackup); $('#backupRestoreBtn').addEventListener('click', () => $('#backupFileInput').click()); $('#backupShareBtn').addEventListener('click', shareBackup); $('#backupFileInput').addEventListener('change', (event) => { restoreBackup(event.target.files[0]); event.target.value = ''; });
+  $('#openSettingsBtn').addEventListener('click', () => { updateGoogleSyncUI(); openBackdrop('infoModal'); }); $('#syncGoogleBtn').addEventListener('click', () => syncGoogleSheet(true)); $('#googleAutoSync').addEventListener('change', (event) => { state.source.googleEnabled = event.target.checked; state.source.googleAutoConfigured = true; state.source.googleUrl = $('#googleSheetUrl').value.trim() || DEFAULT_GOOGLE_SHEET_URL; saveState(); updateConnectionLabel(); if (event.target.checked) syncGoogleSheet(false); }); $('#googleSheetUrl').addEventListener('change', (event) => { state.source.googleUrl = event.target.value.trim() || DEFAULT_GOOGLE_SHEET_URL; saveState(); }); $('#openBackupBtn').addEventListener('click', () => { closeBackdrop('infoModal'); openBackdrop('backupModal'); }); $('[data-close-backup]').addEventListener('click', () => closeBackdrop('backupModal')); $('#backupSaveBtn').addEventListener('click', saveBackup); $('#backupRestoreBtn').addEventListener('click', () => $('#backupFileInput').click()); $('#backupShareBtn').addEventListener('click', shareBackup); $('#backupFileInput').addEventListener('change', (event) => { restoreBackup(event.target.files[0]); event.target.value = ''; });
   $$('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeBackdrop('modalBackdrop')));
   $$('[data-close-editor]').forEach((button) => button.addEventListener('click', () => closeBackdrop('editorModal')));
   $$('[data-close-info]').forEach((button) => button.addEventListener('click', () => closeBackdrop('infoModal')));
