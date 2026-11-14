@@ -28,6 +28,11 @@ let pendingScan = null;
 let torchEnabled = false;
 let torchTrack = null;
 let toastTimer = null;
+let activeScanMode = 'check';
+let catalogQuickFilter = 'all';
+let cameraZoom = 1;
+let enhanceCamera = true;
+let pendingImport = null;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
@@ -35,11 +40,14 @@ const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector
 function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (stored && Array.isArray(stored.products) && Array.isArray(stored.operations)) return stored;
+    if (stored && Array.isArray(stored.products) && Array.isArray(stored.operations)) {
+      stored.products = stored.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product, reserved: Math.min(Math.max(0, Number(product.reserved) || 0), Math.max(0, Number(product.stock) || 0)) }));
+      return stored;
+    }
   } catch (error) {
     console.warn('Не удалось прочитать локальную базу', error);
   }
-  return { products: seedProducts, operations: [], activeView: 'scanner' };
+  return { products: seedProducts.map((product) => ({ ...product, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '' })), operations: [], activeView: 'scanner' };
 }
 
 function saveState() {
@@ -70,11 +78,15 @@ function formatHumanDate(dateValue = Date.now()) {
   return `${date.getDate()} ${monthNames[date.getMonth()]}`;
 }
 
+function getAvailable(product) { return Math.max(0, Number(product.stock || 0) - Number(product.reserved || 0)); }
+
+function getLocation(product) { return [product.warehouse || 'Алматы', product.zone, product.rack, product.bin].filter(Boolean).join(' · ') || 'Место не указано'; }
+
 function getStatus(product) {
   if (product.orderOnly || Number(product.length) >= 4000) {
     return { key: 'blue', label: 'Только под заказ', short: 'Спецзаказ', note: '4 м · поставка 25–30 дней', comment: 'Спецзаказ, срок поставки 25–30 дней' };
   }
-  const stock = Math.max(0, Number(product.stock) || 0);
+  const stock = getAvailable(product);
   if (stock > 10) return { key: 'green', label: 'В наличии', short: 'Много', note: 'Можно отгружать', comment: 'В наличии на складе' };
   if (stock > 0) return { key: 'yellow', label: 'Заканчивается', short: 'Мало', note: 'Предупредить менеджера', comment: 'Мало на складе, нужна проверка' };
   return { key: 'red', label: 'Нет в наличии', short: 'Нет', note: 'Под заказ 25–30 дней', comment: 'Под заказ, срок поставки 25–30 дней' };
@@ -147,8 +159,11 @@ function renderCatalog() {
   const category = $('#categoryFilter')?.value || 'all';
   const products = state.products.filter((product) => {
     const haystack = `${product.sku} ${product.name} ${product.category}`.toLowerCase();
-    return (category === 'all' || product.category === category) && (!query || haystack.includes(query));
-  }).sort((a, b) => Number(a.retired) - Number(b.retired) || a.sku.localeCompare(b.sku, 'ru'));
+    const status = getStatus(product).key;
+    const quick = catalogQuickFilter;
+    const quickOk = quick === 'all' || (quick === 'out' && status === 'red') || (quick === 'low' && status === 'yellow') || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
+    return !product.retired && quickOk && (category === 'all' || product.category === category) && (!query || haystack.includes(query));
+  }).sort((a, b) => a.sku.localeCompare(b.sku, 'ru'));
   $('#catalogSummary').textContent = `${products.length} ${pluralize(products.length, 'позиция', 'позиции', 'позиций')}`;
   if (!products.length) {
     $('#catalogList').innerHTML = `<div class="empty-state"><div class="empty-icon">⌕</div><strong>Ничего не найдено</strong>Измените фильтр или добавьте новую позицию.</div>`;
@@ -158,8 +173,8 @@ function renderCatalog() {
     const status = getStatus(product);
     return `<article class="catalog-card status-${status.key} ${product.retired ? 'retired' : ''}" data-product-id="${escapeHtml(product.id)}">
       <div class="catalog-card-top"><div><div class="catalog-code">${escapeHtml(product.sku)}</div><div class="catalog-name">${escapeHtml(product.name)}</div></div>${product.retired ? '<span class="retired-label">СНЯТО</span>' : `<span class="status-badge status-${status.key}">${escapeHtml(status.short)}</span>`}</div>
-      <div class="catalog-meta"><div class="catalog-tags"><span class="tag">${escapeHtml(product.category)}</span><span class="tag">${Number(product.length) >= 4000 ? '4 м' : '3 м'}</span></div>${product.retired ? '' : `<div class="stock-edit"><button data-stock-delta="-1" aria-label="Уменьшить остаток">−</button><input data-stock-input type="number" min="0" value="${Math.max(0, Number(product.stock) || 0)}" aria-label="Остаток ${escapeHtml(product.sku)}" /><button data-stock-delta="1" aria-label="Увеличить остаток">+</button></div>`}</div>
-      <div class="catalog-actions">${product.retired ? `<button class="mini-button" data-action="restore">↻ Вернуть в каталог</button>` : `<button class="mini-button" data-action="edit">Редактировать</button><button class="mini-button retire" data-action="retire">Снять с производства</button>`}</div>
+      <div class="catalog-meta"><div class="catalog-tags"><span class="tag">${escapeHtml(product.category)}</span><span class="tag">${Number(product.length) >= 4000 ? '4 м' : '3 м'}</span><span class="tag">Дост. ${getAvailable(product)} · Рез. ${Number(product.reserved || 0)}</span></div>${product.retired ? '' : `<div class="stock-edit"><button data-stock-delta="-1" aria-label="Уменьшить остаток">−</button><input data-stock-input type="number" min="0" value="${Math.max(0, Number(product.stock) || 0)}" aria-label="Остаток ${escapeHtml(product.sku)}" /><button data-stock-delta="1" aria-label="Увеличить остаток">+</button></div>`}</div>
+      <div class="catalog-location">${escapeHtml(getLocation(product))}</div><div class="catalog-actions">${product.retired ? `<button class="mini-button" data-action="restore">↻ Вернуть в каталог</button>` : `<button class="mini-button" data-action="edit">Редактировать</button><button class="mini-button retire" data-action="retire">Снять с производства</button>`}</div>
     </article>`;
   }).join('');
 }
@@ -230,9 +245,9 @@ function openProductModal(productId) {
   selectedProductId = productId;
   const status = getStatus(product);
   $('#productModalContent').innerHTML = `<div class="product-modal-head"><p class="eyebrow">Карточка позиции · Алматы</p><div class="product-code-large" id="productModalTitle">${escapeHtml(product.sku)} <span class="tag">${escapeHtml(product.category)}</span></div><div class="product-name-large">${escapeHtml(product.name)}</div></div>
-    <div class="product-status-panel status-${status.key}"><div><div class="status-title">${escapeHtml(status.label)}</div><div class="status-note">${escapeHtml(status.note)}</div></div><div class="product-status-stock"><strong>${Math.max(0, Number(product.stock) || 0)}</strong><span>шт. на складе</span></div></div>
-    <div class="product-facts"><div class="fact"><span>Длина</span><strong>${Number(product.length) >= 4000 ? '4 м · 4000 мм' : '3 м · 3000 мм'}</strong></div><div class="fact"><span>Код сканера</span><strong>${escapeHtml(product.barcode || product.sku)}</strong></div><div class="fact"><span>Срок</span><strong>${status.key === 'green' ? 'Отгрузка' : '25–30 дней'}</strong></div></div>
-    <label class="field-label" for="operationType">Тип операции</label><div class="operation-select-row"><select id="operationType"><option value="out">Расход</option><option value="in">Приход</option><option value="writeoff">Списание на замер</option></select><input class="comment-input" id="operationComment" placeholder="Комментарий, клиент или замер" /></div>
+    <div class="product-status-panel status-${status.key}"><div><div class="status-title">${escapeHtml(status.label)}</div><div class="status-note">${escapeHtml(status.note)}</div></div><div class="product-status-stock"><strong>${Math.max(0, Number(product.stock) || 0)}</strong><span>факт · доступно ${getAvailable(product)}</span><small>резерв ${Number(product.reserved || 0)}</small></div></div>
+    <div class="product-facts"><div class="fact"><span>Место хранения</span><strong>${escapeHtml(getLocation(product))}</strong></div><div class="fact"><span>Длина</span><strong>${Number(product.length) >= 4000 ? '4 м · 4000 мм' : '3 м · 3000 мм'}</strong></div><div class="fact"><span>Код сканера</span><strong>${escapeHtml(product.barcode || product.sku)}</strong></div><div class="fact"><span>Срок</span><strong>${status.key === 'green' ? 'Отгрузка' : '25–30 дней'}</strong></div></div>
+    <label class="field-label" for="operationType">Тип операции</label><div class="operation-select-row"><select id="operationType"><option value="check">Проверить наличие</option><option value="in">Приход</option><option value="out">Расход</option><option value="writeoff">Списание на замер</option></select><input class="comment-input" id="operationComment" placeholder="Комментарий, клиент или замер" /></div>
     <label class="field-label" for="operationQty">Количество, шт.</label><div class="quantity-control"><button type="button" id="qtyMinus" aria-label="Уменьшить количество">−</button><input class="quantity-input" id="operationQty" type="number" min="1" inputmode="numeric" value="1" /><button type="button" id="qtyPlus" aria-label="Увеличить количество">+</button></div>
     <div class="product-primary-row"><button class="secondary-action" type="button" data-close-modal>Отмена</button><button class="primary-action" type="button" id="addOperationBtn"><span>＋</span> Добавить в смену</button></div>`;
   openBackdrop('modalBackdrop');
@@ -251,10 +266,11 @@ function setQuantity(delta) {
 function addOperationFromModal() {
   const product = getProduct(selectedProductId);
   const qty = Math.max(1, Math.floor(Number($('#operationQty').value) || 0));
-  const type = $('#operationType').value;
+  const type = $('#operationType').value === 'check' ? activeScanMode : $('#operationType').value;
   const comment = $('#operationComment').value.trim();
   if (!product || !qty) return;
-  if (type !== 'in' && qty > Number(product.stock || 0)) {
+  if (type === 'check') { closeBackdrop('modalBackdrop'); showToast(`${product.sku}: доступно ${getAvailable(product)} шт. · резерв ${Number(product.reserved || 0)}`); return; }
+  if (type !== 'in' && qty > getAvailable(product)) {
     showToast(`Недостаточно остатка: доступно ${product.stock} шт.`, 'error');
     return;
   }
@@ -280,6 +296,11 @@ function openEditor(productId = null) {
     $('#formCategory').value = product.category;
     $('#formLength').value = String(product.length);
     $('#formStock').value = product.stock;
+    $('#formReserved').value = product.reserved || 0;
+    $('#formWarehouse').value = product.warehouse || 'Алматы';
+    $('#formZone').value = product.zone || '';
+    $('#formRack').value = product.rack || '';
+    $('#formBin').value = product.bin || '';
     $('#formOrderOnly').checked = Boolean(product.orderOnly);
     $('#formBarcode').value = product.barcode || '';
   } else {
@@ -296,7 +317,7 @@ function submitProductForm(event) {
   const sku = $('#formSku').value.trim();
   const duplicate = state.products.find((product) => product.sku.toLowerCase() === sku.toLowerCase() && product.id !== id);
   if (duplicate) { showToast('Такой артикул уже есть в каталоге', 'error'); return; }
-  const data = { sku, name: $('#formName').value.trim(), category: $('#formCategory').value, length: Number($('#formLength').value), stock: Math.max(0, Number($('#formStock').value) || 0), orderOnly: $('#formOrderOnly').checked, barcode: $('#formBarcode').value.trim() || sku, updatedAt: Date.now() };
+  const data = { sku, name: $('#formName').value.trim(), category: $('#formCategory').value, length: Number($('#formLength').value), stock: Math.max(0, Number($('#formStock').value) || 0), reserved: Math.min(Math.max(0, Number($('#formReserved').value) || 0), Math.max(0, Number($('#formStock').value) || 0)), warehouse: $('#formWarehouse').value.trim() || 'Алматы', zone: $('#formZone').value.trim(), rack: $('#formRack').value.trim(), bin: $('#formBin').value.trim(), orderOnly: $('#formOrderOnly').checked, barcode: $('#formBarcode').value.trim() || sku, updatedAt: Date.now() };
   if (!data.sku || !data.name) { showToast('Заполните артикул и название', 'error'); return; }
   if (id) {
     const product = getProduct(id);
@@ -377,6 +398,36 @@ function stopVisualRecognition() {
   setVisualStatus('', false);
 }
 
+
+function createProcessedFrame(video) {
+  const canvas = document.createElement('canvas'); const width = Math.min(720, video.videoWidth || 720); const height = Math.round(width * (video.videoHeight / Math.max(1, video.videoWidth)));
+  canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.filter = enhanceCamera ? 'contrast(1.28) brightness(1.10) saturate(1.08)' : 'none'; ctx.drawImage(video, 0, 0, width, height); if (!enhanceCamera) return canvas;
+  const image = ctx.getImageData(0, 0, width, height); const src = image.data; const out = new Uint8ClampedArray(src); const strength = 0.22;
+  for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) { const i = (y * width + x) * 4; for (let c = 0; c < 3; c++) { const blur = (src[i - 4 + c] + src[i + 4 + c] + src[i - width * 4 + c] + src[i + width * 4 + c]) / 4; out[i + c] = Math.max(0, Math.min(255, src[i + c] + (src[i + c] - blur) * strength)); } }
+  image.data.set(out); ctx.putImageData(image, 0, 0); return canvas;
+}
+
+function applyCameraEnhancement() {
+  const video = $('#reader video');
+  if (video) video.style.filter = enhanceCamera ? 'contrast(1.22) saturate(1.08) brightness(1.08)' : 'none';
+}
+async function applyCameraZoom(delta) {
+  const track = torchTrack || getCameraTrack();
+  const caps = track?.getCapabilities?.();
+  if (!track || !caps?.zoom) { showToast('Масштаб не поддерживается этой камерой', 'error'); return; }
+  cameraZoom = Math.min(Number(caps.zoom.max || 3), Math.max(Number(caps.zoom.min || 1), cameraZoom + delta));
+  try { await track.applyConstraints({ advanced: [{ zoom: cameraZoom }] }); $('#zoomLabel').textContent = `Масштаб ${cameraZoom.toFixed(1)}×`; } catch (_) { showToast('Не удалось изменить масштаб камеры', 'error'); }
+}
+function tuneCameraLowLight() {
+  const track = torchTrack || getCameraTrack(); if (!track) return;
+  const caps = track.getCapabilities?.() || {}; const advanced = [];
+  if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+  if (caps.exposureMode?.includes('continuous')) advanced.push({ exposureMode: 'continuous' });
+  if (caps.brightness) advanced.push({ brightness: Math.min(caps.brightness.max || 1, Math.max(caps.brightness.min || 0, 0.7)) });
+  if (advanced.length) track.applyConstraints({ advanced }).catch(() => {});
+}
+
 function updateTorchButton() {
   const button = $('#torchBtn');
   const label = $('#torchLabel');
@@ -426,9 +477,12 @@ function renderScanSuggestion(candidate) {
   const code = candidate.kind === 'code' ? candidate.code : candidate.match.code;
   const info = candidate.kind === 'code'
     ? (candidate.product ? `${candidate.product.name} · найдено в каталоге` : 'Код найден, позиции пока нет в каталоге')
-    : `${candidate.match.series || 'Панель'} · совпадение ${candidate.match.confidence}%`;
+    : `${candidate.match.series || 'Панель'} · уверенность ${candidate.match.confidence}%${candidate.match.alternatives?.length ? ` · ещё ${candidate.match.alternatives.length} похожих` : ''}`;
   $('#suggestionCode').textContent = code || '—';
   $('#suggestionInfo').textContent = info;
+  const alternatives = candidate.kind === 'visual' ? (candidate.match.alternatives || []) : [];
+  const old = button.querySelector('.similar-list'); if (old) old.remove();
+  if (alternatives.length) { const list = document.createElement('div'); list.className = 'similar-list'; list.innerHTML = alternatives.map((item, index) => `<span data-alt-index="${index}">${escapeHtml(item.code)} · ${item.confidence}%</span>`).join(''); button.appendChild(list); }
   button.classList.remove('hidden');
 }
 
@@ -501,8 +555,9 @@ function startVisualRecognition() {
       if (!video || video.readyState < 2) return;
       visualBusy = true;
       try {
-        const match = await window.PanelVisualMatcher.match(video);
-        if (match && match.confidence >= 52) {
+        const match = await window.PanelVisualMatcher.match(createProcessedFrame(video));
+        if (match) {
+          setVisualStatus(`Уверенность: ${match.confidence}%. ${match.confidence < 60 ? 'Показаны похожие варианты.' : 'Можно подтвердить результат.'}`, true);
           renderScanSuggestion({ kind: 'visual', match });
         }
       } finally {
@@ -533,6 +588,8 @@ async function startScanner() {
       renderScanSuggestion({ kind: 'code', code: decodedText, product });
     }, () => {});
     scannerRunning = true;
+    applyCameraEnhancement();
+    tuneCameraLowLight();
     torchTrack = getCameraTrack();
     $('#scannerHint').textContent = 'Наведите рамку на код или лицевую поверхность панели.';
     startVisualRecognition();
@@ -637,57 +694,34 @@ async function importExcel(file) {
   if (!file) return;
   if (!window.XLSX) { showToast('SheetJS не загрузился', 'error'); return; }
   try {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    const candidates = workbook.SheetNames.map((name, order) => ({ name, order, ...inspectInventorySheet(workbook.Sheets[name]) }))
-      .filter((candidate) => candidate.rows.length)
-      .sort((a, b) => b.score - a.score || a.order - b.order);
-    if (!candidates.length) {
-      showToast('Не найден лист с колонками «Артикул» и «Остаток»', 'error');
-      return;
-    }
-    const preferred = candidates.filter((candidate) => /остат|налич|октябр|ноябр|новая|исток|ассортимент/i.test(candidate.name));
-    const shortlist = [...new Map([...preferred, ...candidates].map((candidate) => [candidate.name, candidate])).values()].slice(0, 10);
-    let selectedSheet = shortlist[0];
-    if (shortlist.length > 1) {
-      const menu = shortlist.map((candidate, index) => `${index + 1}. ${candidate.name} (${candidate.rows.length} строк)`).join('\n');
-      const answer = prompt(`Выберите лист с актуальными остатками:\n\n${menu}\n\nВведите номер листа`, '1');
-      if (answer === null) return;
-      const index = Math.max(0, Math.min(shortlist.length - 1, (parseInt(answer, 10) || 1) - 1));
-      selectedSheet = shortlist[index];
-    }
-    const rows = selectedSheet.rows;
-    let imported = 0;
-    rows.forEach((row) => {
-      const sku = String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.']) || '').trim();
-      if (!sku) return;
-      const name = String(readRowValue(row, ['Название', 'Наименование', 'Товар', 'Name', 'PRODUCT NAME', 'Описание']) || sku).trim();
-      const category = parseImportedCategory(readRowValue(row, ['Категория', 'Тип', 'Category']));
-      const length = parseImportedLength(readRowValue(row, ['Длина', 'Размер', 'Length']));
-      const rawStock = readRowValue(row, ['Остаток', 'Остаток на складе', 'Остаток на складе после поступления товара', 'Количество', 'Кол-во', 'Stock', 'Qty', 'Алматы в наличии']);
-      const stock = parseImportedStock(rawStock);
-      const rawOrder = String(readRowValue(row, ['Только под заказ', 'Спецзаказ', 'Статус', 'Order only'])).toLowerCase();
-      const orderOnly = length >= 4000 || rawOrder.includes('заказ') || rawOrder.includes('спец') || rawOrder === 'да' || rawOrder === 'true';
-      const barcode = String(readRowValue(row, ['Штрихкод', 'Barcode', 'QR', 'Код сканера']) || sku).trim();
-      const existing = state.products.find((product) => product.sku.toLowerCase() === sku.toLowerCase());
-      if (existing) Object.assign(existing, { name, category, length, stock, orderOnly, barcode, retired: false, updatedAt: Date.now() });
-      else state.products.push({ id: `p-${Date.now()}-${imported}`, sku, name, category, length, stock, orderOnly, barcode, retired: false, updatedAt: Date.now() });
-      imported++;
-    });
-    saveState(); renderAll(); showToast(`Лист «${selectedSheet.name}»: импортировано позиций: ${imported}`);
-  } catch (error) {
-    console.error(error);
-    showToast('Не удалось прочитать Excel-файл', 'error');
-  }
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const candidates = workbook.SheetNames.map((name, order) => ({ name, order, ...inspectInventorySheet(workbook.Sheets[name]) })).filter((candidate) => candidate.rows.length).sort((a, b) => b.score - a.score || a.order - b.order);
+    if (!candidates.length) { showToast('Не найден лист с колонками «Артикул» и «Остаток»', 'error'); return; }
+    pendingImport = { workbook, candidates };
+    const options = candidates.slice(0, 12).map((candidate, index) => `<option value="${index}">${escapeHtml(candidate.name)} · ${candidate.rows.length} строк</option>`).join('');
+    $('#importPreviewContent').innerHTML = `<label class="field-label">Лист с остатками<select id="previewSheetSelect" class="preview-select">${options}</select></label><div id="importPreviewStats" class="import-preview-stats"></div><div class="import-preview-table-wrap"><table class="import-preview-table"><thead><tr><th>Артикул</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="importPreviewRows"></tbody></table></div>`;
+    $('#previewSheetSelect').addEventListener('change', renderImportPreviewDetails); renderImportPreviewDetails(); openBackdrop('importPreviewModal');
+  } catch (error) { console.error(error); showToast('Не удалось прочитать Excel-файл', 'error'); }
 }
-
+function getImportRows() { const index = Number($('#previewSheetSelect')?.value || 0); return pendingImport?.candidates[index]?.rows || []; }
+function renderImportPreviewDetails() {
+  const rows = getImportRows(); let valid = 0, empty = 0, duplicate = 0, updates = 0; const seen = new Set(); const preview = [];
+  rows.forEach((row) => { const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (!sku) { empty++; return; } valid++; const key = sku.toLowerCase(); if (seen.has(key)) duplicate++; seen.add(key); const existing = state.products.find((product) => product.sku.toLowerCase() === key); if (existing) updates++; preview.push({ sku, name: String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(), stock: parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])) }); });
+  $('#importPreviewStats').innerHTML = `<div><b>${valid}</b><span>позиций найдено</span></div><div><b>${updates}</b><span>обновится</span></div><div><b>${duplicate}</b><span>дубликатов</span></div><div><b>${empty}</b><span>пустых артикулов</span></div>${duplicate || empty ? '<p class="import-warning">Проверьте дубликаты и пустые артикулы перед импортом.</p>' : ''}`;
+  $('#importPreviewRows').innerHTML = preview.slice(0, 30).map((item) => `<tr><td>${escapeHtml(item.sku)}</td><td>${escapeHtml(item.name)}</td><td>${item.stock}</td></tr>`).join('');
+}
+function confirmImport() {
+  if (!pendingImport) return; const rows = getImportRows(); let imported = 0; const batch = Date.now();
+  rows.forEach((row, index) => { const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (!sku) return; const name = String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(); const category = parseImportedCategory(readRowValue(row, ['Категория','Тип','Category']) || name); const length = parseImportedLength(readRowValue(row, ['Длина','Размер','Length']) || name); const stock = parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])); const reserved = Math.min(stock, parseImportedStock(readRowValue(row, ['Зарезервировано','Резерв','Reserved']))); const warehouse = String(readRowValue(row, ['Склад','Warehouse']) || 'Алматы').trim(); const zone = String(readRowValue(row, ['Зона','Zone']) || '').trim(); const rack = String(readRowValue(row, ['Стеллаж','Rack']) || '').trim(); const bin = String(readRowValue(row, ['Ячейка','Bin','Cell']) || '').trim(); const existing = state.products.find((product) => product.sku.toLowerCase() === sku.toLowerCase()); const data = { name, category, length, stock, reserved, warehouse, zone, rack, bin, barcode: sku, retired: false, updatedAt: Date.now() }; if (existing) Object.assign(existing, data); else state.products.push({ id: `p-${batch}-${index}`, sku, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '', orderOnly: length >= 4000, ...data }); imported++; });
+  saveState(); closeBackdrop('importPreviewModal'); pendingImport = null; renderAll(); showToast(`Импорт завершён: ${imported} позиций`);
+}
 function exportExcel() {
   if (!window.XLSX) { showToast('SheetJS не загрузился', 'error'); return; }
   if (!state.operations.length) { showToast('Добавьте хотя бы одну операцию', 'error'); return; }
   const rows = state.operations.map((operation) => {
     const product = getProduct(operation.productId);
     const status = product ? getStatus(product) : getStatus({ length: operation.length, stock: operation.stockAfter, orderOnly: false });
-    return { 'Дата': formatDate(operation.createdAt, true), 'Артикул': operation.sku, 'Название': operation.name, 'Категория': operation.category, 'Длина': Number(operation.length) >= 4000 ? '4 м / 4000 мм' : '3 м / 3000 мм', 'Количество, шт.': operation.qty, 'Операция': operationLabels[operation.type], 'Остаток после': operation.stockAfter, 'Статус': status.label, 'Комментарий по срокам': status.comment, 'Комментарий': operation.comment || '' };
+    return { 'Дата': formatDate(operation.createdAt, true), 'Артикул': operation.sku, 'Название': operation.name, 'Категория': operation.category, 'Длина': Number(operation.length) >= 4000 ? '4 м / 4000 мм' : '3 м / 3000 мм', 'Количество, шт.': operation.qty, 'Операция': operationLabels[operation.type], 'Остаток после': operation.stockAfter, 'Статус': status.label, 'Комментарий по срокам': status.comment, 'Комментарий': operation.comment || '', 'Факт': product?.stock || operation.stockAfter, 'Зарезервировано': product?.reserved || 0, 'Доступно': product ? getAvailable(product) : operation.stockAfter, 'Место хранения': product ? getLocation(product) : '' };
   });
   const worksheet = XLSX.utils.json_to_sheet(rows);
   worksheet['!cols'] = [{ wch: 17 }, { wch: 15 }, { wch: 34 }, { wch: 14 }, { wch: 17 }, { wch: 16 }, { wch: 23 }, { wch: 16 }, { wch: 22 }, { wch: 36 }, { wch: 28 }];
@@ -704,28 +738,38 @@ function clearOperations() {
   saveState(); renderAll(); showToast('Журнал очищен');
 }
 
+
+function downloadJson(filename, payload) { const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
+function saveBackup() { downloadJson(`FORONE_база_${formatDate(Date.now()).replaceAll('.', '-')}.json`, { version: 2, exportedAt: new Date().toISOString(), state }); showToast('Резервная копия сохранена'); }
+function restoreBackup(file) { if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!data?.state?.products || !Array.isArray(data.state.operations)) throw new Error('invalid'); if (!confirm('Заменить локальную базу данными из файла?')) return; state = { ...data.state, products: data.state.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product })) }; saveState(); renderAll(); showToast('База восстановлена'); } catch (_) { showToast('Файл резервной копии повреждён', 'error'); } }; reader.readAsText(file); }
+async function shareBackup() { const payload = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), state }, null, 2); const file = new File([payload], 'FORONE-база.json', { type: 'application/json' }); if (navigator.share && navigator.canShare?.({ files: [file] })) { await navigator.share({ title: 'FORONE база', text: 'Резервная копия складской базы', files: [file] }); } else { saveBackup(); showToast('Файл скачан — отправьте его на другой телефон'); } }
+
 function initEvents() {
   $$('.nav-item').forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
-  $('#scanSuggestion').addEventListener('click', acceptScanSuggestion);
+  $('#scanSuggestion').addEventListener('click', (event) => { const alt = event.target.closest('[data-alt-index]'); if (alt && pendingScan?.kind === 'visual') { const item = pendingScan.match.alternatives[Number(alt.dataset.altIndex)]; if (item) { pendingScan = { kind: 'visual', match: item }; } } acceptScanSuggestion(); });
   $('#torchBtn').addEventListener('click', toggleTorch);
+  $('#zoomInBtn').addEventListener('click', () => applyCameraZoom(.25)); $('#zoomOutBtn').addEventListener('click', () => applyCameraZoom(-.25)); $('#enhanceBtn').addEventListener('click', () => { enhanceCamera = !enhanceCamera; $('#enhanceBtn').setAttribute('aria-pressed', String(enhanceCamera)); applyCameraEnhancement(); });
   $('#manualCodeBtn').addEventListener('click', manualCodeLookup);
   $('#searchInput').addEventListener('input', renderSearchResults);
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });
   $('#searchResults').addEventListener('click', (event) => { const result = event.target.closest('[data-search-product]'); if (result) { $('#searchResults').classList.add('hidden'); openProductModal(result.dataset.searchProduct); } });
   $('#catalogSearch').addEventListener('input', renderCatalog);
   $('#categoryFilter').addEventListener('change', renderCatalog);
+  $('#quickFilters').addEventListener('click', (event) => { const button = event.target.closest('[data-filter]'); if (!button) return; catalogQuickFilter = button.dataset.filter; $$('.quick-filter').forEach((item) => item.classList.toggle('active', item === button)); renderCatalog(); });
+  $$('.scan-mode').forEach((button) => button.addEventListener('click', () => { activeScanMode = button.dataset.scanMode; $$('.scan-mode').forEach((item) => item.classList.toggle('active', item === button)); showToast(`Режим: ${button.textContent}`); }));
   $('#catalogList').addEventListener('click', handleCatalogClick);
   $('#catalogList').addEventListener('change', handleCatalogStockInput);
   $('#addProductBtn').addEventListener('click', () => openEditor());
   $('#productForm').addEventListener('submit', submitProductForm);
   $('#importBtn').addEventListener('click', () => $('#fileInput').click());
   $('#fileInput').addEventListener('change', (event) => { importExcel(event.target.files[0]); event.target.value = ''; });
+  $('#confirmImportBtn').addEventListener('click', confirmImport); $('#closeImportPreview').addEventListener('click', () => closeBackdrop('importPreviewModal')); $('#cancelImportBtn').addEventListener('click', () => closeBackdrop('importPreviewModal'));
   $('#exportBtn').addEventListener('click', exportExcel);
   $('#clearOperationsBtn').addEventListener('click', clearOperations);
-  $('#openSettingsBtn').addEventListener('click', () => openBackdrop('infoModal'));
+  $('#openSettingsBtn').addEventListener('click', () => openBackdrop('infoModal')); $('#openBackupBtn').addEventListener('click', () => { closeBackdrop('infoModal'); openBackdrop('backupModal'); }); $('[data-close-backup]').addEventListener('click', () => closeBackdrop('backupModal')); $('#backupSaveBtn').addEventListener('click', saveBackup); $('#backupRestoreBtn').addEventListener('click', () => $('#backupFileInput').click()); $('#backupShareBtn').addEventListener('click', shareBackup); $('#backupFileInput').addEventListener('change', (event) => { restoreBackup(event.target.files[0]); event.target.value = ''; });
   $$('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeBackdrop('modalBackdrop')));
   $$('[data-close-editor]').forEach((button) => button.addEventListener('click', () => closeBackdrop('editorModal')));
   $$('[data-close-info]').forEach((button) => button.addEventListener('click', () => closeBackdrop('infoModal')));

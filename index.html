@@ -40,6 +40,12 @@
             <p>Сканируй код или найди позицию по артикулу.</p>
           </div>
           <div class="hero-scan-orbit" aria-hidden="true"><span></span><b>SCAN</b></div>
+          <div class="scan-modes" role="group" aria-label="Режим сканера">
+            <button class="scan-mode active" data-scan-mode="check">Проверить наличие</button>
+            <button class="scan-mode" data-scan-mode="in">Приход</button>
+            <button class="scan-mode" data-scan-mode="out">Расход</button>
+            <button class="scan-mode" data-scan-mode="writeoff">Списание на замер</button>
+          </div>
           <button class="primary-action scan-action" id="scanBtn"><span class="button-icon">⌗</span> Сканировать камерой</button>
         </div>
 
@@ -71,6 +77,10 @@
         <div class="catalog-toolbar">
           <div class="search-wrap catalog-search"><span class="search-icon">⌕</span><input id="catalogSearch" type="search" placeholder="Фильтр каталога…" aria-label="Фильтр каталога" /></div>
           <select id="categoryFilter" aria-label="Фильтр категории"><option value="all">Все категории</option><option value="Панель">Панели</option><option value="Лувер">Луверы</option><option value="Профиль">Профили</option></select>
+          <button class="filter-toggle" id="openFiltersBtn" type="button">Фильтры</button>
+        </div>
+        <div class="quick-filters" id="quickFilters" aria-label="Быстрые фильтры">
+          <button class="quick-filter active" data-filter="all">Все</button><button class="quick-filter" data-filter="out">Нет в наличии</button><button class="quick-filter" data-filter="low">Мало</button><button class="quick-filter" data-filter="4m">Панели 4 м</button><button class="quick-filter" data-filter="louvers">Луверы</button><button class="quick-filter" data-filter="recent">Недавно изменённые</button>
         </div>
         <div class="catalog-summary"><span id="catalogSummary">0 позиций</span><span class="catalog-sort-label">по алфавиту <span>↕</span></span></div>
         <div class="catalog-list" id="catalogList"></div>
@@ -112,9 +122,14 @@
       <p class="scanner-hint" id="scannerHint">Наведите рамку на штрих-код или QR-код позиции.</p>
       <p class="visual-status hidden" id="visualStatus"></p>
       <button class="scan-suggestion hidden" id="scanSuggestion" type="button"><span class="suggestion-kicker">ПРЕДЛОЖЕННЫЙ ВАРИАНТ</span><strong id="suggestionCode">—</strong><small id="suggestionInfo">Наведите камеру на панель</small><b>SCAN · выбрать вариант</b></button>
+      <div class="scanner-enhance" aria-label="Настройка камеры"><button class="secondary-action" id="zoomOutBtn" type="button">−</button><span id="zoomLabel">Масштаб 1×</span><button class="secondary-action" id="zoomInBtn" type="button">+</button><button class="secondary-action" id="enhanceBtn" type="button" aria-pressed="true">Контраст и резкость</button></div>
       <div class="scanner-controls"><button class="secondary-action" id="torchBtn" type="button" aria-pressed="false"><span class="torch-icon">☼</span><span id="torchLabel">Подсветка</span></button><button class="secondary-action" id="manualCodeBtn" type="button">Ввести код вручную</button></div>
     </div>
   </div>
+
+  <div class="modal-backdrop hidden" id="importPreviewModal" aria-hidden="true"><div class="modal-sheet import-sheet" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle"><div class="modal-handle"></div><button class="modal-close" id="closeImportPreview" aria-label="Закрыть">×</button><p class="eyebrow">Предпросмотр импорта</p><h2 id="importPreviewTitle">Проверьте данные Excel</h2><div id="importPreviewContent"></div><div class="product-primary-row"><button class="secondary-action" id="cancelImportBtn">Отмена</button><button class="primary-action" id="confirmImportBtn">Импортировать</button></div></div></div>
+
+  <div class="modal-backdrop hidden" id="backupModal" aria-hidden="true"><div class="modal-sheet" role="dialog" aria-modal="true"><div class="modal-handle"></div><button class="modal-close" data-close-backup aria-label="Закрыть">×</button><p class="eyebrow">Перенос базы</p><h2>Резервная копия</h2><p class="modal-copy">Файл содержит каталог, остатки, резервы, места хранения и журнал операций.</p><div class="backup-actions"><button class="secondary-action full-width" id="backupSaveBtn">Сохранить резервную копию базы</button><button class="secondary-action full-width" id="backupRestoreBtn">Восстановить базу</button><button class="primary-action full-width" id="backupShareBtn">Передать базу на другой телефон</button><input id="backupFileInput" type="file" accept="application/json,.json" hidden /></div></div></div>
 
   <div class="modal-backdrop hidden" id="editorModal" aria-hidden="true">
     <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
@@ -125,7 +140,7 @@
         <label>Артикул<input id="formSku" required placeholder="Например, Н234-YP" /></label>
         <label>Название<input id="formName" required placeholder="Название позиции" /></label>
         <div class="form-row"><label>Категория<select id="formCategory"><option>Панель</option><option>Лувер</option><option>Профиль</option></select></label><label>Длина<select id="formLength"><option value="3000">3 м · 3000 мм</option><option value="4000">4 м · 4000 мм</option></select></label></div>
-        <div class="form-row"><label>Остаток, шт.<input id="formStock" type="number" inputmode="numeric" min="0" step="1" value="0" required /></label><label class="toggle-field">Только под заказ <span class="switch"><input id="formOrderOnly" type="checkbox" /><i></i></span></label></div>
+        <div class="form-row"><label>Остаток, шт.<input id="formStock" type="number" inputmode="numeric" min="0" step="1" value="0" required /></label><label>Зарезервировано, шт.<input id="formReserved" type="number" inputmode="numeric" min="0" step="1" value="0" /></label></div><div class="form-row"><label>Склад<input id="formWarehouse" value="Алматы" /></label><label>Зона<input id="formZone" placeholder="A-03" /></label></div><div class="form-row"><label>Стеллаж<input id="formRack" placeholder="Стеллаж 2" /></label><label>Ячейка<input id="formBin" placeholder="B-12" /></label></div><div class="form-row"><label class="toggle-field">Только под заказ <span class="switch"><input id="formOrderOnly" type="checkbox" /><i></i></span></label></div>
         <label>Код для сканера <span class="optional-label">необязательно</span><input id="formBarcode" placeholder="Если отличается от артикула" /></label>
         <button class="primary-action full-width" type="submit"><span>✓</span> Сохранить позицию</button>
       </form>
@@ -133,7 +148,7 @@
   </div>
 
   <div class="modal-backdrop hidden" id="infoModal" aria-hidden="true">
-    <div class="modal-sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-handle"></div><button class="modal-close" data-close-info aria-label="Закрыть">×</button><div class="info-logo">F<span>/</span>O</div><p class="eyebrow">FORONE.KZ · STOCK CONTROL</p><h2 id="infoTitle">Склад всегда под рукой.</h2><p class="modal-copy">Работает офлайн, сохраняет данные на этом устройстве и помогает быстро проверить остатки в Алматы.</p><div class="info-list"><div><span>⌁</span><p><b>Автосохранение</b><small>Каталог и смена в localStorage</small></p></div><div><span>◈</span><p><b>Статусы в цвете</b><small>Много, мало, нет и спецзаказ</small></p></div><div><span>⇄</span><p><b>Excel</b><small>Импорт базы и отчет .xlsx</small></p></div></div><button class="secondary-action full-width" data-close-info>Понятно</button></div>
+    <div class="modal-sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-handle"></div><button class="modal-close" data-close-info aria-label="Закрыть">×</button><div class="info-logo">F<span>/</span>O</div><p class="eyebrow">FORONE.KZ · STOCK CONTROL</p><h2 id="infoTitle">Склад всегда под рукой.</h2><p class="modal-copy">Работает офлайн, сохраняет данные на этом устройстве и помогает быстро проверить остатки в Алматы.</p><div class="info-list"><div><span>⌁</span><p><b>Автосохранение</b><small>Каталог и смена в localStorage</small></p></div><div><span>◈</span><p><b>Статусы в цвете</b><small>Много, мало, нет и спецзаказ</small></p></div><div><span>⇄</span><p><b>Excel</b><small>Импорт базы и отчет .xlsx</small></p></div></div><button class="secondary-action full-width" id="openBackupBtn">Резервная копия и перенос базы</button><button class="secondary-action full-width" data-close-info>Понятно</button></div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon">✓</span><span id="toastMessage">Сохранено</span></div>
