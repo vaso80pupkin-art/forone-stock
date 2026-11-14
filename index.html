@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b171a" />
+  <meta name="description" content="Офлайн складской контроль декоративных панелей, луверов и профилей FORONE.KZ" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f3c969'/%3E%3Cpath d='M19 47V17h9v18l8-18h9v30h-9V29l-8 18z' fill='%230b171a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>FORONE.KZ · Склад</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="brand-name">FORONE<span>.KZ</span></div>
+          <div class="brand-caption">STOCK CONTROL · ALMATY</div>
+        </div>
+      </div>
+      <div class="connection-pill"><span class="connection-dot"></span><span id="connectionLabel">Офлайн готов</span></div>
+    </header>
+
+    <main class="main-content">
+      <section class="view active" id="view-scanner" aria-labelledby="scannerTitle">
+        <div class="view-heading">
+          <div>
+            <p class="eyebrow">Смена <span id="shiftDate">—</span></p>
+            <h1 id="scannerTitle">Быстрый контроль</h1>
+          </div>
+          <button class="icon-button" id="openSettingsBtn" title="Информация о приложении" aria-label="Информация о приложении">i</button>
+        </div>
+
+        <div class="hero-scan-card">
+          <div class="hero-scan-copy">
+            <span class="hero-kicker">WAREHOUSE · 01</span>
+            <h2>Проверь наличие<br /><em>за пару секунд.</em></h2>
+            <p>Сканируй код или найди позицию по артикулу.</p>
+          </div>
+          <div class="hero-scan-orbit" aria-hidden="true"><span></span><b>SCAN</b></div>
+          <button class="primary-action scan-action" id="scanBtn"><span class="button-icon">⌗</span> Сканировать камерой</button>
+        </div>
+
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Артикул или название…" aria-label="Поиск по артикулу или названию" />
+          <button class="clear-search hidden" id="clearSearch" aria-label="Очистить поиск">×</button>
+        </div>
+        <div class="search-results hidden" id="searchResults"></div>
+
+        <div class="metrics-grid">
+          <article class="metric-card metric-total"><div class="metric-label">В каталоге</div><div class="metric-value" id="metricProducts">0</div><div class="metric-foot">активных позиций <span>↗</span></div></article>
+          <article class="metric-card metric-alert"><div class="metric-label">Нужен контроль</div><div class="metric-value" id="metricAlerts">0</div><div class="metric-foot">мало или нет <span>!</span></div></article>
+          <article class="metric-card metric-ops"><div class="metric-label">За смену</div><div class="metric-value" id="metricOps">0</div><div class="metric-foot">операций <span>⌁</span></div></article>
+        </div>
+
+        <div class="section-heading"><div><p class="eyebrow">Визуальный контроль</p><h2>Состояние склада</h2></div><span class="section-count" id="stockCountLabel">0 позиций</span></div>
+        <div class="status-strip" id="statusStrip"></div>
+
+        <div class="section-heading compact-heading"><div><p class="eyebrow">Недавнее</p><h2>Последние операции</h2></div><button class="text-button" data-view="reports">Все операции <span>→</span></button></div>
+        <div class="recent-list" id="recentList"></div>
+      </section>
+
+      <section class="view" id="view-catalog" aria-labelledby="catalogTitle">
+        <div class="view-heading catalog-heading">
+          <div><p class="eyebrow">Справочник склада</p><h1 id="catalogTitle">Каталог</h1></div>
+          <button class="round-add" id="addProductBtn" title="Добавить новую позицию">+</button>
+        </div>
+        <div class="catalog-toolbar">
+          <div class="search-wrap catalog-search"><span class="search-icon">⌕</span><input id="catalogSearch" type="search" placeholder="Фильтр каталога…" aria-label="Фильтр каталога" /></div>
+          <select id="categoryFilter" aria-label="Фильтр категории"><option value="all">Все категории</option><option value="Панель">Панели</option><option value="Лувер">Луверы</option><option value="Профиль">Профили</option></select>
+        </div>
+        <div class="catalog-summary"><span id="catalogSummary">0 позиций</span><span class="catalog-sort-label">по алфавиту <span>↕</span></span></div>
+        <div class="catalog-list" id="catalogList"></div>
+      </section>
+
+      <section class="view" id="view-reports" aria-labelledby="reportsTitle">
+        <div class="view-heading">
+          <div><p class="eyebrow">Текущая смена</p><h1 id="reportsTitle">Отчеты</h1></div>
+          <div class="shift-chip"><span class="live-dot"></span><span id="reportDate">—</span></div>
+        </div>
+        <div class="report-hero"><div><span class="hero-kicker">SHIFT SUMMARY</span><h2><span id="reportItemsCount">0</span> позиций<br /><em>собрано сегодня</em></h2></div><div class="report-total"><span>Итого, шт.</span><strong id="reportUnitsCount">0</strong></div></div>
+        <div class="report-actions"><button class="secondary-action" id="importBtn"><span>⇣</span><span>Импорт базы<br /><b>.XLSX</b></span></button><button class="primary-action" id="exportBtn"><span>⇡</span><span>Скачать отчет<br /><b>.XLSX</b></span></button><input id="fileInput" type="file" accept=".xlsx,.xls" hidden /></div>
+        <div class="section-heading compact-heading"><div><p class="eyebrow">Журнал движения</p><h2>Операции за смену</h2></div><button class="text-button danger-text" id="clearOperationsBtn">Очистить</button></div>
+        <div class="operations-list" id="operationsList"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="nav-item active" data-view="scanner"><span class="nav-icon nav-scan">⌗</span><span>Сканер</span></button>
+      <button class="nav-item" data-view="catalog"><span class="nav-icon">▦</span><span>Каталог</span></button>
+      <button class="nav-item" data-view="reports"><span class="nav-icon">◒</span><span>Отчеты</span><span class="nav-badge hidden" id="navOpsBadge">0</span></button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop" aria-hidden="true">
+    <div class="modal-sheet" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+      <div class="modal-handle"></div>
+      <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
+      <div id="productModalContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scannerModal" aria-hidden="true">
+    <div class="modal-sheet scanner-sheet" role="dialog" aria-modal="true" aria-labelledby="scannerModalTitle">
+      <div class="modal-handle"></div>
+      <button class="modal-close" id="closeScannerBtn" aria-label="Закрыть">×</button>
+      <p class="eyebrow">Камера телефона</p><h2 id="scannerModalTitle">Сканирование</h2>
+      <div class="reader-frame"><div id="reader"></div><div class="reader-corners"></div></div>
+      <p class="scanner-hint" id="scannerHint">Наведите рамку на штрих-код или QR-код позиции.</p>
+      <button class="secondary-action full-width" id="manualCodeBtn">Ввести код вручную</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="editorModal" aria-hidden="true">
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+      <div class="modal-handle"></div><button class="modal-close" data-close-editor aria-label="Закрыть">×</button>
+      <p class="eyebrow" id="editorEyebrow">Новая позиция</p><h2 id="editorTitle">Добавить в каталог</h2>
+      <form class="product-form" id="productForm">
+        <input type="hidden" id="editProductId" />
+        <label>Артикул<input id="formSku" required placeholder="Например, Н234-YP" /></label>
+        <label>Название<input id="formName" required placeholder="Название позиции" /></label>
+        <div class="form-row"><label>Категория<select id="formCategory"><option>Панель</option><option>Лувер</option><option>Профиль</option></select></label><label>Длина<select id="formLength"><option value="3000">3 м · 3000 мм</option><option value="4000">4 м · 4000 мм</option></select></label></div>
+        <div class="form-row"><label>Остаток, шт.<input id="formStock" type="number" inputmode="numeric" min="0" step="1" value="0" required /></label><label class="toggle-field">Только под заказ <span class="switch"><input id="formOrderOnly" type="checkbox" /><i></i></span></label></div>
+        <label>Код для сканера <span class="optional-label">необязательно</span><input id="formBarcode" placeholder="Если отличается от артикула" /></label>
+        <button class="primary-action full-width" type="submit"><span>✓</span> Сохранить позицию</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="infoModal" aria-hidden="true">
+    <div class="modal-sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-handle"></div><button class="modal-close" data-close-info aria-label="Закрыть">×</button><div class="info-logo">F<span>/</span>O</div><p class="eyebrow">FORONE.KZ · STOCK CONTROL</p><h2 id="infoTitle">Склад всегда под рукой.</h2><p class="modal-copy">Работает офлайн, сохраняет данные на этом устройстве и помогает быстро проверить остатки в Алматы.</p><div class="info-list"><div><span>⌁</span><p><b>Автосохранение</b><small>Каталог и смена в localStorage</small></p></div><div><span>◈</span><p><b>Статусы в цвете</b><small>Много, мало, нет и спецзаказ</small></p></div><div><span>⇄</span><p><b>Excel</b><small>Импорт базы и отчет .xlsx</small></p></div></div><button class="secondary-action full-width" data-close-info>Понятно</button></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon">✓</span><span id="toastMessage">Сохранено</span></div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
