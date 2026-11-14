@@ -795,6 +795,9 @@ function initButtonHints() {
     button.title = hint;
     button.setAttribute('aria-label', button.getAttribute('aria-label') || hint);
     button.dataset.tooltip = hint;
+    button.addEventListener('pointerenter', (event) => { if (event.pointerType === 'pen') button.classList.add('tooltip-visible'); });
+    button.addEventListener('pointerleave', () => button.classList.remove('tooltip-visible'));
+    button.addEventListener('pointerdown', () => button.classList.remove('tooltip-visible'));
   });
 }
 
