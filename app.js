@@ -406,8 +406,8 @@ function findProductsByCode(code) {
   return getActiveProducts().filter((product) => [product.sku, product.barcode, product.name].some((value) => String(value || '').toLowerCase() === normalized));
 }
 function findProductByCode(code) { return findProductsByCode(code)[0]; }
-function sameImportedProduct(product, sku, category) {
-  return product.sku.toLowerCase() === sku.toLowerCase() && product.category === category;
+function sameImportedProduct(product, sku, category, name = '') {
+  return product.sku.toLowerCase() === sku.toLowerCase() && product.category === category && (!name || product.name.trim().toLowerCase() === name.trim().toLowerCase());
 }
 
 function setVisualStatus(message, visible = true) {
@@ -670,6 +670,12 @@ function readRowValue(row, aliases) {
   return entry ? entry[1] : '';
 }
 
+function isSummaryRow(row) {
+  const sku = String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.']) || '').trim().toLowerCase();
+  const name = String(readRowValue(row, ['Название', 'Наименование', 'Товар', 'Name', 'PRODUCT NAME', 'Описание']) || '').trim();
+  return /^(итого|всего|total)(\b|\s)/i.test(sku) || (sku && !name);
+}
+
 function parseImportedLength(value) {
   const stringValue = String(value ?? '').toLowerCase().replace(/\s+/g, ' ');
   return /4000|(?:^|[^0-9])4\s*м(?:\b|$)|4\s*метр/.test(stringValue) ? 4000 : 3000;
@@ -719,7 +725,7 @@ function inspectInventorySheet(sheet) {
   }
   if (headerIndex < 0) return { rows: [], score: 0, headerIndex: -1 };
   const rows = XLSX.utils.sheet_to_json(sheet, { range: headerIndex, defval: '' });
-  const validRows = rows.filter((row) => String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.'])).trim());
+  const validRows = rows.filter((row) => String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.'])).trim() && !isSummaryRow(row));
   const numericStockRows = validRows.filter((row) => String(readRowValue(row, ['Остаток', 'Остаток на складе', 'Остаток на складе после поступления товара', 'Количество', 'Кол-во', 'Stock', 'Qty', 'Алматы в наличии'])).trim());
   return { rows, score: 20 + validRows.length + numericStockRows.length * 2, headerIndex };
 }
@@ -743,13 +749,13 @@ async function importExcel(file) {
 function getImportRows() { if (pendingImport?.autoRows) return pendingImport.autoRows; const index = Number($('#previewSheetSelect')?.value || 0); return pendingImport?.candidates[index]?.rows || []; }
 function renderImportPreviewDetails() {
   const rows = getImportRows(); let valid = 0, empty = 0, duplicate = 0, updates = 0; const seen = new Set(); const preview = [];
-  rows.forEach((row) => { const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (!sku) { empty++; return; } valid++; const key = sku.toLowerCase(); if (seen.has(key)) duplicate++; seen.add(key); const name = String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(); const category = parseImportedCategory(readRowValue(row, ['Категория','Тип','Category']) || name); const existing = state.products.find((product) => sameImportedProduct(product, sku, category)); if (existing) updates++; preview.push({ sku, name, category, stock: parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])) }); });
+  rows.forEach((row) => { const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (isSummaryRow(row)) return; if (!sku) { empty++; return; } valid++; const key = sku.toLowerCase(); if (seen.has(key)) duplicate++; seen.add(key); const name = String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(); const category = parseImportedCategory(readRowValue(row, ['Категория','Тип','Category']) || name); const existing = state.products.find((product) => sameImportedProduct(product, sku, category, name)); if (existing) updates++; preview.push({ sku, name, category, stock: parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])) }); });
   $('#importPreviewStats').innerHTML = `<div><b>${valid}</b><span>позиций найдено</span></div><div><b>${updates}</b><span>обновится</span></div><div><b>${duplicate}</b><span>дубликатов</span></div><div><b>${empty}</b><span>пустых артикулов</span></div>${duplicate || empty ? '<p class="import-warning">Проверьте дубликаты и пустые артикулы перед импортом.</p>' : ''}`;
   $('#importPreviewRows').innerHTML = preview.slice(0, 30).map((item) => `<tr><td>${escapeHtml(item.sku)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.name)}</td><td>${item.stock}</td></tr>`).join('');
 }
 function confirmImport() {
   if (!pendingImport) return; const rows = getImportRows(); let imported = 0; const batch = Date.now();
-  rows.forEach((row, index) => { const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (!sku) return; const name = String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(); const category = parseImportedCategory(readRowValue(row, ['Категория','Тип','Category']) || name); const length = parseImportedLength(readRowValue(row, ['Длина','Размер','Length']) || name); const stock = parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])); const reserved = Math.min(stock, parseImportedStock(readRowValue(row, ['Зарезервировано','Резерв','Reserved']))); const warehouse = String(readRowValue(row, ['Склад','Warehouse']) || 'Алматы').trim(); const zone = String(readRowValue(row, ['Зона','Zone']) || '').trim(); const rack = String(readRowValue(row, ['Стеллаж','Rack']) || '').trim(); const bin = String(readRowValue(row, ['Ячейка','Bin','Cell']) || '').trim(); const existing = state.products.find((product) => sameImportedProduct(product, sku, category)); const data = { name, category, length, stock, reserved, warehouse, zone, rack, bin, barcode: sku, retired: false, updatedAt: Date.now() }; if (existing) Object.assign(existing, data); else state.products.push({ id: `p-${batch}-${index}`, sku, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '', orderOnly: length >= 4000, ...data }); imported++; });
+  rows.forEach((row, index) => { if (isSummaryRow(row)) return; const sku = String(readRowValue(row, ['Артикул','SKU','Код','Article','Номенклатура','COLOR NO.']) || '').trim(); if (!sku) return; const name = String(readRowValue(row, ['Название','Наименование','Товар','Name','PRODUCT NAME','Описание']) || sku).trim(); const category = parseImportedCategory(readRowValue(row, ['Категория','Тип','Category']) || name); const length = parseImportedLength(readRowValue(row, ['Длина','Размер','Length']) || name); const stock = parseImportedStock(readRowValue(row, ['Остаток','Остаток на складе','Количество','Кол-во','Stock','Qty','Алматы в наличии'])); const reserved = Math.min(stock, parseImportedStock(readRowValue(row, ['Зарезервировано','Резерв','Reserved']))); const warehouse = String(readRowValue(row, ['Склад','Warehouse']) || 'Алматы').trim(); const zone = String(readRowValue(row, ['Зона','Zone']) || '').trim(); const rack = String(readRowValue(row, ['Стеллаж','Rack']) || '').trim(); const bin = String(readRowValue(row, ['Ячейка','Bin','Cell']) || '').trim(); const existing = state.products.find((product) => sameImportedProduct(product, sku, category, name)); const data = { name, category, length, stock, reserved, warehouse, zone, rack, bin, barcode: sku, retired: false, updatedAt: Date.now() }; if (existing) Object.assign(existing, data); else state.products.push({ id: `p-${batch}-${index}`, sku, reserved: 0, warehouse: 'Алматы', zone: '', rack: '', bin: '', orderOnly: length >= 4000, ...data }); imported++; });
   const importSource = pendingImport.source; if (importSource === 'google') { state.source = state.source || {}; state.source.googleSheet = $('#previewSheetSelect')?.selectedOptions?.[0]?.textContent?.split(' · ')[0] || state.source.googleSheet; state.source.googleLastSync = Date.now(); state.source.googleApproved = true; } saveState(); closeBackdrop('importPreviewModal'); pendingImport = null; renderAll(); updateGoogleSyncUI(); showToast(`${importSource === 'google' ? 'Синхронизация' : 'Импорт'} завершён: ${imported} позиций`);
 }
 function exportExcel() {
