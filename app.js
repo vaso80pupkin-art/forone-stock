@@ -671,8 +671,8 @@ function readRowValue(row, aliases) {
 }
 
 function parseImportedLength(value) {
-  const stringValue = String(value ?? '').toLowerCase();
-  return stringValue.includes('4') || stringValue.includes('4000') ? 4000 : 3000;
+  const stringValue = String(value ?? '').toLowerCase().replace(/\s+/g, ' ');
+  return /4000|(?:^|[^0-9])4\s*м(?:\b|$)|4\s*метр/.test(stringValue) ? 4000 : 3000;
 }
 
 function parseImportedCategory(value) {
