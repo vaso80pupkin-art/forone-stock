@@ -761,7 +761,45 @@ function saveBackup() { downloadJson(`FORONE_база_${formatDate(Date.now()).r
 function restoreBackup(file) { if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!data?.state?.products || !Array.isArray(data.state.operations)) throw new Error('invalid'); if (!confirm('Заменить локальную базу данными из файла?')) return; state = { ...data.state, products: data.state.products.map((product) => ({ warehouse: 'Алматы', zone: '', rack: '', bin: '', reserved: 0, ...product })), source: { googleUrl: DEFAULT_GOOGLE_SHEET_URL, googleEnabled: true, googleSheet: 'Октябрь-Ноябрь', googleLastSync: 0, googleAutoConfigured: true, ...(data.state.source || {}) } }; saveState(); renderAll(); showToast('База восстановлена'); } catch (_) { showToast('Файл резервной копии повреждён', 'error'); } }; reader.readAsText(file); }
 async function shareBackup() { const payload = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), state }, null, 2); const file = new File([payload], 'FORONE-база.json', { type: 'application/json' }); if (navigator.share && navigator.canShare?.({ files: [file] })) { await navigator.share({ title: 'FORONE база', text: 'Резервная копия складской базы', files: [file] }); } else { saveBackup(); showToast('Файл скачан — отправьте его на другой телефон'); } }
 
+const buttonHelpById = {
+  openSettingsBtn: 'Открыть информацию, Google Sheets и резервную копию',
+  scanBtn: 'Открыть камеру и отсканировать артикул или QR-код',
+  clearSearch: 'Очистить строку поиска',
+  addProductBtn: 'Добавить новую позицию в каталог',
+  resetFiltersBtn: 'Сбросить поиск, категорию и все фильтры',
+  importBtn: 'Загрузить Excel-файл с остатками',
+  exportBtn: 'Скачать текущий отчёт в Excel',
+  clearOperationsBtn: 'Удалить журнал операций текущей смены',
+  syncGoogleBtn: 'Загрузить остатки из Google Таблицы сейчас',
+  openBackupBtn: 'Открыть сохранение и перенос резервной копии',
+  backupSaveBtn: 'Скачать полную базу на телефон',
+  backupRestoreBtn: 'Восстановить базу из JSON-файла',
+  backupShareBtn: 'Передать резервную копию на другой телефон',
+  torchBtn: 'Включить или выключить подсветку камеры',
+  manualCodeBtn: 'Найти товар по коду без камеры',
+  zoomInBtn: 'Увеличить изображение камеры',
+  zoomOutBtn: 'Уменьшить изображение камеры',
+  enhanceBtn: 'Включить или выключить усиление контраста и резкости'
+};
+function initButtonHints() {
+  const modeHints = { check: 'Показать остаток без изменения базы', in: 'Добавить поступление к остатку', out: 'Оформить расход и уменьшить доступный остаток', writeoff: 'Списать товар на замер и записать операцию' };
+  const filterHints = { all: 'Показать все активные позиции', out: 'Показать позиции без доступного остатка', low: 'Показать позиции с малым остатком', '4m': 'Показать панели длиной 4 метра', louvers: 'Показать только луверы', recent: 'Показать изменённые за последние 7 дней' };
+  const viewHints = { scanner: 'Перейти к сканеру и быстрому контролю', catalog: 'Открыть каталог товаров и фильтры', reports: 'Открыть отчёты и журнал операций' };
+  $$('button').forEach((button) => {
+    let hint = buttonHelpById[button.id] || button.dataset.help || '';
+    if (button.matches('.scan-mode')) hint = modeHints[button.dataset.scanMode];
+    if (button.matches('.quick-filter')) hint = filterHints[button.dataset.filter];
+    if (button.matches('.nav-item')) hint = viewHints[button.dataset.view];
+    if (!hint) hint = button.getAttribute('aria-label') || button.textContent.trim().replace(/\s+/g, ' ');
+    if (!hint) return;
+    button.title = hint;
+    button.setAttribute('aria-label', button.getAttribute('aria-label') || hint);
+    button.dataset.tooltip = hint;
+  });
+}
+
 function initEvents() {
+  initButtonHints();
   $$('.nav-item').forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
