@@ -7,7 +7,95 @@
   <meta name="description" content="Офлайн складской контроль декоративных панелей, луверов и профилей FORONE.KZ" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f3c969'/%3E%3Cpath d='M19 47V17h9v18l8-18h9v30h-9V29l-8 18z' fill='%230b171a'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css" />
+  <style id="forone-inline-styles">
+:root {
+  --bg: #091316;
+  --bg-soft: #0d1c20;
+  --panel: #112328;
+  --panel-raised: #172d32;
+  --panel-muted: #1b353a;
+  --line: rgba(210, 232, 225, 0.1);
+  --line-strong: rgba(210, 232, 225, 0.18);
+  --text: #f4f4e9;
+  --muted: #8fa7a2;
+  --muted-strong: #bdcbc2;
+  --accent: #f3c969;
+  --accent-strong: #e9b74b;
+  --green: #69d58d;
+  --green-bg: rgba(105, 213, 141, .13);
+  --yellow: #f5b95f;
+  --yellow-bg: rgba(245, 185, 95, .14);
+  --red: #ff776f;
+  --red-bg: rgba(255, 119, 111, .13);
+  --blue: #9d92ff;
+  --blue-bg: rgba(157, 146, 255, .15);
+  --shadow: 0 18px 45px rgba(0, 0, 0, .22);
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); min-height: 100%; }
+body { margin: 0; background: radial-gradient(circle at 100% -5%, #18373b 0, var(--bg) 32rem); color: var(--text); min-width: 320px; min-height: 100vh; font-size: 15px; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; }
+button { border: 0; cursor: pointer; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select { color: var(--text); }
+
+.app-shell { width: 100%; max-width: 720px; min-height: 100vh; margin: 0 auto; padding-bottom: calc(88px + var(--safe-bottom)); }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 8px; }
+.brand-lockup { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 31px; height: 31px; display: flex; gap: 3px; align-items: flex-end; transform: skew(-16deg); }
+.brand-mark span { display: block; width: 7px; border-radius: 5px 5px 2px 2px; background: var(--accent); }
+.brand-mark span:nth-child(1) { height: 21px; opacity: .55; }.brand-mark span:nth-child(2) { height: 28px; }.brand-mark span:nth-child(3) { height: 17px; opacity: .7; }
+.brand-name { font-size: 16px; font-weight: 800; letter-spacing: .08em; line-height: 1; }.brand-name span { color: var(--accent); }
+.brand-caption { font-size: 8px; letter-spacing: .22em; color: var(--muted); margin-top: 5px; font-weight: 700; }
+.connection-pill, .shift-chip { border: 1px solid var(--line); border-radius: 99px; color: var(--muted-strong); font-size: 10px; padding: 8px 10px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.connection-dot, .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%; box-shadow: 0 0 0 3px rgba(105, 213, 141, .12); }
+
+.main-content { padding: 10px 16px 0; }
+.view { display: none; animation: viewIn .3s ease both; }.view.active { display: block; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.view-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 17px 4px 20px; }
+.view-heading h1 { margin: 4px 0 0; font-size: 29px; line-height: 1.05; letter-spacing: -.05em; font-weight: 780; }.view-heading h2 { margin: 4px 0 0; }
+.eyebrow { color: var(--muted); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; font-weight: 800; margin: 0; }.section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 28px 4px 13px; }.section-heading h2 { font-size: 18px; letter-spacing: -.025em; margin: 4px 0 0; }.section-count, .catalog-sort-label { color: var(--muted); font-size: 11px; }.catalog-sort-label span { color: var(--accent); }
+.icon-button { display: grid; place-items: center; border: 1px solid var(--line-strong); background: transparent; width: 34px; height: 34px; border-radius: 50%; color: var(--muted-strong); font-weight: 700; font-size: 14px; }.icon-button:hover { color: var(--accent); border-color: var(--accent); }
+
+.hero-scan-card { position: relative; overflow: hidden; min-height: 192px; border: 1px solid rgba(243, 201, 105, .2); border-radius: var(--radius-lg); background: linear-gradient(120deg, #19353a 0%, #10272c 58%, #182c31 100%); padding: 23px 21px 18px; box-shadow: var(--shadow); }
+.hero-scan-card:before { content: ""; position: absolute; width: 260px; height: 260px; border-radius: 50%; border: 1px solid rgba(243, 201, 105, .09); right: -100px; top: -105px; }.hero-scan-card:after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 1px solid rgba(243, 201, 105, .08); right: -75px; top: -80px; }
+.hero-scan-copy { position: relative; z-index: 2; }.hero-kicker { color: var(--accent); font-size: 9px; letter-spacing: .18em; font-weight: 800; }.hero-scan-card h2, .report-hero h2 { font-size: 27px; line-height: 1.04; letter-spacing: -.05em; margin: 11px 0 8px; font-weight: 780; }.hero-scan-card h2 em, .report-hero h2 em { color: var(--accent); font-style: normal; }.hero-scan-card p { color: var(--muted-strong); font-size: 12px; margin: 0; max-width: 220px; }.hero-scan-orbit { position: absolute; right: 16px; top: 22px; width: 83px; height: 83px; border: 1px solid rgba(243, 201, 105, .28); border-radius: 50%; display: grid; place-items: center; color: var(--accent); font-size: 9px; letter-spacing: .15em; }.hero-scan-orbit:before, .hero-scan-orbit:after { content: ""; position: absolute; border-radius: 50%; border: 1px solid rgba(243, 201, 105, .11); }.hero-scan-orbit:before { inset: 11px; }.hero-scan-orbit:after { inset: -13px; }.hero-scan-orbit span { position: absolute; width: 5px; height: 5px; right: 6px; top: 14px; background: var(--accent); border-radius: 50%; }.hero-scan-orbit b { font-weight: 800; }
+.primary-action, .secondary-action { min-height: 48px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-weight: 800; font-size: 13px; transition: transform .15s ease, filter .15s ease, background .15s ease; }.primary-action { background: var(--accent); color: #182023; box-shadow: 0 8px 18px rgba(243, 201, 105, .14); }.primary-action:hover, .secondary-action:hover { filter: brightness(1.06); transform: translateY(-1px); }.secondary-action { background: var(--panel-raised); border: 1px solid var(--line-strong); color: var(--text); }.scan-action { position: absolute; z-index: 2; left: 21px; bottom: 18px; padding: 0 16px; }.button-icon { font-size: 22px; line-height: 1; font-weight: 400; }
+
+.search-wrap { height: 51px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); background: rgba(24, 45, 50, .8); border-radius: 15px; padding: 0 14px; margin-top: 14px; transition: border-color .2s; }.search-wrap:focus-within { border-color: rgba(243, 201, 105, .55); }.search-icon { font-size: 25px; line-height: 1; color: var(--muted); transform: rotate(-20deg); }.search-wrap input { background: none; border: 0; outline: none; min-width: 0; flex: 1; font-size: 14px; }.search-wrap input::placeholder { color: #75908c; }.clear-search { background: var(--panel-muted); color: var(--muted-strong); width: 24px; height: 24px; border-radius: 50%; font-size: 19px; line-height: 20px; }.hidden { display: none !important; }
+.search-results { position: relative; margin-top: 6px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 15px; overflow: hidden; z-index: 10; box-shadow: var(--shadow); }.search-result { display: flex; align-items: center; gap: 11px; padding: 13px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }.search-result:last-child { border-bottom: 0; }.search-result:hover { background: var(--panel-raised); }.result-code { color: var(--text); font-weight: 800; font-size: 13px; }.result-name { color: var(--muted); font-size: 11px; margin-top: 3px; }.result-main { flex: 1; min-width: 0; }.result-stock { color: var(--muted-strong); font-size: 11px; text-align: right; }.result-stock strong { display: block; color: var(--text); font-size: 14px; }.no-results { padding: 18px 14px; color: var(--muted); text-align: center; font-size: 13px; }
+
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }.metric-card { min-height: 98px; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--panel); padding: 14px 12px; position: relative; overflow: hidden; }.metric-card:after { content: ""; position: absolute; width: 58px; height: 58px; border-radius: 50%; right: -23px; bottom: -24px; border: 1px solid var(--line); }.metric-label { color: var(--muted); font-size: 10px; font-weight: 700; line-height: 1.1; }.metric-value { font-size: 29px; letter-spacing: -.07em; font-weight: 780; margin-top: 8px; line-height: .9; }.metric-foot { color: var(--muted); font-size: 9px; margin-top: 10px; white-space: nowrap; }.metric-foot span { color: var(--accent); margin-left: 3px; }.metric-alert .metric-value { color: var(--yellow); }.metric-ops .metric-value { color: var(--blue); }
+.status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }.status-box { border: 1px solid var(--line); border-radius: 14px; padding: 11px 9px; background: var(--panel); min-width: 0; }.status-box .status-num { font-weight: 800; font-size: 20px; line-height: 1; }.status-box .status-name { color: var(--muted); font-size: 9px; line-height: 1.1; margin-top: 7px; }.status-box.status-green .status-num { color: var(--green); }.status-box.status-yellow .status-num { color: var(--yellow); }.status-box.status-red .status-num { color: var(--red); }.status-box.status-blue .status-num { color: var(--blue); }
+.compact-heading { margin-top: 30px; }.text-button { background: none; color: var(--accent); font-size: 11px; padding: 3px 0; font-weight: 700; }.text-button span { font-size: 16px; margin-left: 3px; }.danger-text { color: var(--red); }
+.recent-list, .operations-list { display: flex; flex-direction: column; gap: 8px; }.empty-state { border: 1px dashed var(--line-strong); border-radius: var(--radius-md); padding: 28px 18px; text-align: center; color: var(--muted); font-size: 13px; }.empty-state strong { display: block; color: var(--muted-strong); margin-bottom: 5px; }.empty-icon { display: grid; place-items: center; width: 38px; height: 38px; margin: 0 auto 10px; border-radius: 50%; color: var(--accent); background: var(--yellow-bg); font-size: 20px; }
+
+.operation-row { display: flex; align-items: center; gap: 11px; padding: 12px; border-radius: 15px; background: var(--panel); border: 1px solid var(--line); }.operation-mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; font-weight: 800; flex: 0 0 auto; }.op-in .operation-mark { background: var(--green-bg); color: var(--green); }.op-out .operation-mark, .op-writeoff .operation-mark { background: var(--red-bg); color: var(--red); }.operation-info { flex: 1; min-width: 0; }.operation-code { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.operation-desc { color: var(--muted); font-size: 10px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.operation-amount { text-align: right; }.operation-amount strong { display: block; font-size: 14px; }.operation-amount span { display: block; color: var(--muted); font-size: 9px; margin-top: 3px; }.amount-plus { color: var(--green); }.amount-minus { color: var(--red); }
+
+.bottom-nav { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: 0; width: min(100%, 720px); padding: 9px 18px calc(9px + var(--safe-bottom)); display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; background: rgba(9, 19, 22, .92); border-top: 1px solid var(--line); backdrop-filter: blur(18px); }.nav-item { position: relative; background: transparent; min-height: 53px; border-radius: 14px; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 10px; font-weight: 700; }.nav-item.active { color: var(--accent); background: rgba(243, 201, 105, .08); }.nav-icon { font-size: 20px; line-height: 18px; font-weight: 400; }.nav-scan { font-size: 25px; }.nav-badge { position: absolute; right: 26%; top: 5px; min-width: 16px; height: 16px; border-radius: 99px; background: var(--accent); color: #182023; font-size: 9px; display: grid; place-items: center; }
+
+.catalog-heading { margin-bottom: 16px; }.round-add { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #182023; font-size: 28px; font-weight: 400; line-height: 1; box-shadow: 0 8px 18px rgba(243, 201, 105, .15); }.catalog-toolbar { display: flex; gap: 8px; align-items: center; }.catalog-search { flex: 1; margin-top: 0; height: 48px; }.catalog-toolbar select { border: 1px solid var(--line); background: var(--panel); border-radius: 13px; min-height: 48px; padding: 0 10px; font-size: 11px; max-width: 130px; }.catalog-summary { display: flex; justify-content: space-between; margin: 15px 3px 9px; color: var(--muted-strong); font-size: 11px; }.catalog-list { display: flex; flex-direction: column; gap: 9px; }.catalog-card { position: relative; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--line-strong); border-radius: 16px; padding: 14px 12px 12px 14px; }.catalog-card.status-green { border-left-color: var(--green); }.catalog-card.status-yellow { border-left-color: var(--yellow); }.catalog-card.status-red { border-left-color: var(--red); }.catalog-card.status-blue { border-left-color: var(--blue); }.catalog-card.retired { opacity: .52; }.catalog-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }.catalog-code { font-weight: 800; font-size: 14px; }.catalog-name { font-size: 11px; color: var(--muted); margin-top: 4px; }.status-badge { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; border-radius: 99px; padding: 6px 8px; font-size: 9px; font-weight: 800; }.status-badge:before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }.status-badge.status-green { color: var(--green); background: var(--green-bg); }.status-badge.status-yellow { color: var(--yellow); background: var(--yellow-bg); }.status-badge.status-red { color: var(--red); background: var(--red-bg); }.status-badge.status-blue { color: var(--blue); background: var(--blue-bg); }.catalog-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }.catalog-tags { display: flex; gap: 6px; flex-wrap: wrap; }.tag { color: var(--muted-strong); border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px; font-size: 9px; }.stock-edit { display: flex; align-items: center; gap: 5px; }.stock-edit button { width: 26px; height: 26px; border-radius: 8px; background: var(--panel-muted); color: var(--muted-strong); font-size: 16px; }.stock-edit button:hover { color: var(--accent); }.stock-edit input { width: 38px; background: none; border: 0; text-align: center; font-weight: 800; font-size: 14px; padding: 0; }.catalog-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }.mini-button { background: none; color: var(--muted); font-size: 10px; padding: 3px 0; }.mini-button:hover { color: var(--accent); }.mini-button.retire:hover { color: var(--red); }.retired-label { color: var(--red); font-size: 10px; font-weight: 700; }
+
+.report-hero { display: flex; justify-content: space-between; align-items: flex-end; min-height: 154px; border-radius: var(--radius-lg); background: linear-gradient(125deg, #263951, #1a293d 75%, #192c3d); border: 1px solid rgba(157, 146, 255, .2); padding: 22px 20px; position: relative; overflow: hidden; }.report-hero:after { content: ""; position: absolute; right: -70px; top: -80px; width: 230px; height: 230px; border: 1px solid rgba(157, 146, 255, .15); border-radius: 50%; box-shadow: 0 0 0 25px rgba(157, 146, 255, .03), 0 0 0 52px rgba(157, 146, 255, .02); }.report-hero h2 { position: relative; z-index: 1; margin-bottom: 0; }.report-total { position: relative; z-index: 1; text-align: right; }.report-total span { display: block; color: #abb6cc; font-size: 10px; }.report-total strong { color: #c0baff; font-size: 42px; letter-spacing: -.08em; line-height: 1; }.report-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }.report-actions button { min-height: 60px; text-align: left; justify-content: flex-start; padding: 0 14px; }.report-actions button > span:first-child { font-size: 25px; font-weight: 300; }.report-actions button span:last-child { line-height: 1.1; font-size: 11px; }.report-actions b { font-size: 10px; letter-spacing: .1em; }.report-actions .primary-action { color: #22262a; }.report-actions .secondary-action { color: var(--muted-strong); }.report-actions .secondary-action b { color: var(--accent); }
+
+.modal-backdrop { position: fixed; z-index: 50; inset: 0; display: flex; align-items: flex-end; justify-content: center; background: rgba(2, 8, 9, .72); backdrop-filter: blur(5px); padding: 0; }.modal-sheet { position: relative; width: min(100%, 620px); max-height: 92vh; overflow: auto; background: #102126; border: 1px solid var(--line-strong); border-radius: 26px 26px 0 0; padding: 28px 18px calc(18px + var(--safe-bottom)); box-shadow: 0 -20px 60px rgba(0, 0, 0, .25); animation: sheetIn .25s ease both; }.modal-handle { width: 42px; height: 4px; border-radius: 99px; background: var(--line-strong); position: absolute; top: 10px; left: 50%; transform: translateX(-50%); }.modal-close { position: absolute; top: 17px; right: 17px; width: 31px; height: 31px; border-radius: 50%; background: var(--panel-raised); color: var(--muted); font-size: 22px; line-height: 1; }.modal-sheet h2 { font-size: 26px; letter-spacing: -.05em; margin: 5px 0 18px; }.scanner-sheet { min-height: 570px; }.scanner-sheet .eyebrow { margin-top: 3px; }.reader-frame { position: relative; margin: 12px auto 14px; width: min(100%, 350px); aspect-ratio: 1; border-radius: 22px; overflow: hidden; background: #071013; border: 1px solid var(--line-strong); }.reader-frame #reader { width: 100%; height: 100%; }.reader-frame video { width: 100% !important; height: 100% !important; object-fit: cover; }.reader-frame img { display: none !important; }.reader-frame > div:not(.reader-corners) { border: 0 !important; }.reader-corners { pointer-events: none; position: absolute; inset: 14%; border: 2px solid var(--accent); border-radius: 12px; box-shadow: 0 0 0 999px rgba(3, 9, 10, .28); }.reader-corners:after { content: ""; position: absolute; height: 2px; width: 90%; left: 5%; top: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: scanline 2.1s ease-in-out infinite; }.scanner-hint { text-align: center; color: var(--muted); font-size: 12px; line-height: 1.45; max-width: 290px; margin: 0 auto 17px; }.full-width { width: 100%; }.product-modal-head { padding-right: 30px; }.product-code-large { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 25px; letter-spacing: -.045em; font-weight: 800; }.product-name-large { color: var(--muted); font-size: 12px; margin: 7px 0 15px; }.product-status-panel { border: 1px solid currentColor; border-radius: 17px; padding: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }.product-status-panel.status-green { color: var(--green); background: var(--green-bg); }.product-status-panel.status-yellow { color: var(--yellow); background: var(--yellow-bg); }.product-status-panel.status-red { color: var(--red); background: var(--red-bg); }.product-status-panel.status-blue { color: var(--blue); background: var(--blue-bg); }.product-status-panel .status-title { font-size: 14px; font-weight: 800; }.product-status-panel .status-note { color: currentColor; opacity: .8; font-size: 10px; margin-top: 4px; }.product-status-stock { text-align: right; }.product-status-stock strong { display: block; color: var(--text); font-size: 30px; line-height: .9; letter-spacing: -.07em; }.product-status-stock span { color: var(--muted-strong); font-size: 9px; display: block; margin-top: 5px; }.product-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 17px; }.fact { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }.fact span { color: var(--muted); display: block; font-size: 9px; }.fact strong { display: block; font-size: 12px; margin-top: 5px; }.operation-select-row { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; margin-bottom: 10px; }.field-label { display: block; color: var(--muted); font-size: 10px; margin: 0 0 6px; }.operation-select-row select, .comment-input, .quantity-input { width: 100%; min-height: 46px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 12px; padding: 0 11px; }.quantity-control { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; align-items: center; margin-bottom: 14px; }.quantity-control button { height: 46px; border-radius: 12px; background: var(--panel-raised); border: 1px solid var(--line); font-size: 22px; color: var(--muted-strong); }.quantity-input { text-align: center; font-size: 18px; font-weight: 800; }.comment-input { display: block; margin-bottom: 14px; }.product-primary-row { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; }.product-primary-row .secondary-action { color: var(--muted-strong); }
+
+.product-form { display: flex; flex-direction: column; gap: 13px; }.product-form label { color: var(--muted-strong); display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 700; }.product-form input, .product-form select { min-height: 46px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 12px; padding: 0 12px; color: var(--text); outline: none; }.product-form input:focus, .product-form select:focus { border-color: var(--accent); }.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.optional-label { color: var(--muted); font-weight: 400; }.toggle-field { justify-content: center; }.switch { margin-top: 1px; display: block; position: relative; width: 48px; height: 27px; }.switch input { opacity: 0; width: 0 !important; height: 0 !important; padding: 0 !important; }.switch i { position: absolute; inset: 0; border-radius: 99px; background: var(--panel-muted); border: 1px solid var(--line-strong); transition: .2s; }.switch i:after { content: ""; position: absolute; width: 19px; height: 19px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: .2s; }.switch input:checked + i { background: var(--accent); }.switch input:checked + i:after { transform: translateX(21px); background: #152025; }
+.info-logo { font-size: 36px; font-weight: 900; letter-spacing: -.15em; color: var(--accent); margin: 6px 0 23px; }.info-logo span { color: var(--muted); }.info-sheet .modal-copy { color: var(--muted-strong); font-size: 13px; line-height: 1.55; margin: -5px 0 20px; max-width: 330px; }.info-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }.info-list > div { display: flex; align-items: center; gap: 12px; }.info-list > div > span { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; color: var(--accent); background: var(--yellow-bg); }.info-list p { margin: 0; }.info-list b, .info-list small { display: block; }.info-list b { font-size: 12px; }.info-list small { color: var(--muted); font-size: 10px; margin-top: 3px; }
+.toast { position: fixed; z-index: 100; left: 50%; bottom: calc(88px + var(--safe-bottom)); transform: translate(-50%, 30px); opacity: 0; pointer-events: none; min-width: 210px; max-width: calc(100% - 40px); border: 1px solid var(--line-strong); border-radius: 99px; background: #1d3538; box-shadow: var(--shadow); padding: 11px 15px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text); font-size: 12px; font-weight: 700; transition: opacity .25s ease, transform .25s ease; }.toast.show { opacity: 1; transform: translate(-50%, 0); }.toast-icon { color: var(--green); font-size: 16px; }
+@keyframes sheetIn { from { transform: translateY(40px); opacity: .7; } to { transform: translateY(0); opacity: 1; } }@keyframes scanline { 0%, 100% { transform: translateY(-42px); opacity: .3; } 50% { transform: translateY(42px); opacity: 1; } }
+
+@media (min-width: 560px) { .main-content { padding-left: 24px; padding-right: 24px; }.topbar { padding-left: 28px; padding-right: 28px; }.hero-scan-card { min-height: 205px; }.hero-scan-card h2 { font-size: 31px; }.metrics-grid { gap: 12px; }.metric-card { padding: 16px; }.status-strip { gap: 10px; }.bottom-nav { padding-left: 80px; padding-right: 80px; } }
+@media (min-width: 720px) { .app-shell { border-left: 1px solid rgba(210, 232, 225, .04); border-right: 1px solid rgba(210, 232, 225, .04); }.modal-backdrop { align-items: center; padding: 24px; }.modal-sheet { border-radius: 26px; max-height: 88vh; }.bottom-nav { bottom: 14px; border: 1px solid var(--line); border-radius: 19px; width: min(470px, calc(100% - 48px)); padding: 7px; }.toast { bottom: 92px; } }
+
+  </style>
   <title>FORONE.KZ · Склад</title>
 </head>
 <body>
@@ -138,6 +226,524 @@
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="app.js"></script>
+  <script id="forone-inline-app">
+const STORAGE_KEY = 'forone-stock-state-v1';
+const SHIFT_KEY = 'forone-stock-shift-v1';
+
+const seedProducts = [
+  { id: 'p-001', sku: 'Н234-YP', name: 'Бамбуковая панель Natural Oak', category: 'Панель', length: 3000, stock: 36, orderOnly: false, barcode: 'Н234-YP', retired: false, updatedAt: Date.now() },
+  { id: 'p-002', sku: 'К01-206N', name: 'Лувер Vertical Graphite', category: 'Лувер', length: 3000, stock: 8, orderOnly: false, barcode: 'К01-206N', retired: false, updatedAt: Date.now() },
+  { id: 'p-003', sku: 'ПР-40-WH', name: 'Профиль завершающий White', category: 'Профиль', length: 3000, stock: 0, orderOnly: false, barcode: 'ПР-40-WH', retired: false, updatedAt: Date.now() },
+  { id: 'p-004', sku: 'Н318-SM', name: 'Бамбуковая панель Smoky Grey', category: 'Панель', length: 3000, stock: 14, orderOnly: false, barcode: 'Н318-SM', retired: false, updatedAt: Date.now() },
+  { id: 'p-005', sku: 'Н401-CL', name: 'Бамбуковая панель Clay, спецзаказ', category: 'Панель', length: 4000, stock: 0, orderOnly: true, barcode: 'Н401-CL', retired: false, updatedAt: Date.now() },
+  { id: 'p-006', sku: 'ПР-22-BR', name: 'Соединительный профиль Brown', category: 'Профиль', length: 3000, stock: 52, orderOnly: false, barcode: 'ПР-22-BR', retired: false, updatedAt: Date.now() },
+  { id: 'p-007', sku: 'К07-311S', name: 'Лувер Slim Sand', category: 'Лувер', length: 3000, stock: 3, orderOnly: false, barcode: 'К07-311S', retired: false, updatedAt: Date.now() },
+  { id: 'p-008', sku: 'Н215-MB', name: 'Бамбуковая панель Matte Black', category: 'Панель', length: 3000, stock: 21, orderOnly: false, barcode: 'Н215-MB', retired: false, updatedAt: Date.now() }
+];
+
+const operationLabels = { in: 'Приход', out: 'Расход', writeoff: 'Списание на замер' };
+const operationIcons = { in: '+', out: '−', writeoff: '×' };
+const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+let state = loadState();
+let activeView = state.activeView || 'scanner';
+let selectedProductId = null;
+let scannerInstance = null;
+let scannerRunning = false;
+let toastTimer = null;
+
+const $ = (selector, parent = document) => parent.querySelector(selector);
+const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+
+function loadState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (stored && Array.isArray(stored.products) && Array.isArray(stored.operations)) return stored;
+  } catch (error) {
+    console.warn('Не удалось прочитать локальную базу', error);
+  }
+  return { products: seedProducts, operations: [], activeView: 'scanner' };
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(SHIFT_KEY, new Date().toISOString());
+    updateConnectionLabel();
+  } catch (error) {
+    showToast('Не удалось сохранить данные', 'error');
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char]));
+}
+
+function formatDate(dateValue, withTime = false) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '—';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return withTime ? `${day}.${month} · ${time}` : `${day}.${month}.${date.getFullYear()}`;
+}
+
+function formatHumanDate(dateValue = Date.now()) {
+  const date = new Date(dateValue);
+  return `${date.getDate()} ${monthNames[date.getMonth()]}`;
+}
+
+function getStatus(product) {
+  if (product.orderOnly || Number(product.length) >= 4000) {
+    return { key: 'blue', label: 'Только под заказ', short: 'Спецзаказ', note: '4 м · поставка 25–30 дней', comment: 'Спецзаказ, срок поставки 25–30 дней' };
+  }
+  const stock = Math.max(0, Number(product.stock) || 0);
+  if (stock > 10) return { key: 'green', label: 'В наличии', short: 'Много', note: 'Можно отгружать', comment: 'В наличии на складе' };
+  if (stock > 0) return { key: 'yellow', label: 'Заканчивается', short: 'Мало', note: 'Предупредить менеджера', comment: 'Мало на складе, нужна проверка' };
+  return { key: 'red', label: 'Нет в наличии', short: 'Нет', note: 'Под заказ 25–30 дней', comment: 'Под заказ, срок поставки 25–30 дней' };
+}
+
+function getProduct(id) {
+  return state.products.find((product) => product.id === id);
+}
+
+function getActiveProducts() {
+  return state.products.filter((product) => !product.retired);
+}
+
+function updateConnectionLabel() {
+  const label = $('#connectionLabel');
+  if (label) label.textContent = 'Локально сохранено';
+}
+
+function renderHeader() {
+  $('#shiftDate').textContent = formatHumanDate();
+  $('#reportDate').textContent = formatDate(Date.now());
+  updateConnectionLabel();
+}
+
+function renderMetrics() {
+  const activeProducts = getActiveProducts();
+  const alerts = activeProducts.filter((product) => ['yellow', 'red'].includes(getStatus(product).key)).length;
+  $('#metricProducts').textContent = activeProducts.length;
+  $('#metricAlerts').textContent = alerts;
+  $('#metricOps').textContent = state.operations.length;
+  $('#stockCountLabel').textContent = `${activeProducts.length} позиций`;
+  $('#navOpsBadge').textContent = state.operations.length > 99 ? '99+' : state.operations.length;
+  $('#navOpsBadge').classList.toggle('hidden', state.operations.length === 0);
+}
+
+function renderStatusStrip() {
+  const active = getActiveProducts();
+  const counts = { green: 0, yellow: 0, red: 0, blue: 0 };
+  active.forEach((product) => counts[getStatus(product).key]++);
+  $('#statusStrip').innerHTML = `
+    <div class="status-box status-green"><div class="status-num">${counts.green}</div><div class="status-name">В наличии</div></div>
+    <div class="status-box status-yellow"><div class="status-num">${counts.yellow}</div><div class="status-name">Мало</div></div>
+    <div class="status-box status-red"><div class="status-num">${counts.red}</div><div class="status-name">Нет</div></div>
+    <div class="status-box status-blue"><div class="status-num">${counts.blue}</div><div class="status-name">Спецзаказ</div></div>`;
+}
+
+function operationRow(operation) {
+  const isIncoming = operation.type === 'in';
+  return `<div class="operation-row ${isIncoming ? 'op-in' : operation.type === 'out' ? 'op-out' : 'op-writeoff'}">
+    <div class="operation-mark">${operationIcons[operation.type]}</div>
+    <div class="operation-info"><div class="operation-code">${escapeHtml(operation.sku)}</div><div class="operation-desc">${escapeHtml(operation.name)} · ${operationLabels[operation.type]}${operation.comment ? ` · ${escapeHtml(operation.comment)}` : ''}</div></div>
+    <div class="operation-amount"><strong class="${isIncoming ? 'amount-plus' : 'amount-minus'}">${isIncoming ? '+' : '−'}${operation.qty}</strong><span>${formatDate(operation.createdAt, true)}</span></div>
+  </div>`;
+}
+
+function renderRecent() {
+  const recent = [...state.operations].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
+  $('#recentList').innerHTML = recent.length ? recent.map(operationRow).join('') : `<div class="empty-state"><div class="empty-icon">⌁</div><strong>Операций пока нет</strong>Отсканируйте позицию и добавьте первое движение за смену.</div>`;
+}
+
+function renderCatalog() {
+  const query = ($('#catalogSearch')?.value || '').trim().toLowerCase();
+  const category = $('#categoryFilter')?.value || 'all';
+  const products = state.products.filter((product) => {
+    const haystack = `${product.sku} ${product.name} ${product.category}`.toLowerCase();
+    return (category === 'all' || product.category === category) && (!query || haystack.includes(query));
+  }).sort((a, b) => Number(a.retired) - Number(b.retired) || a.sku.localeCompare(b.sku, 'ru'));
+  $('#catalogSummary').textContent = `${products.length} ${pluralize(products.length, 'позиция', 'позиции', 'позиций')}`;
+  if (!products.length) {
+    $('#catalogList').innerHTML = `<div class="empty-state"><div class="empty-icon">⌕</div><strong>Ничего не найдено</strong>Измените фильтр или добавьте новую позицию.</div>`;
+    return;
+  }
+  $('#catalogList').innerHTML = products.map((product) => {
+    const status = getStatus(product);
+    return `<article class="catalog-card status-${status.key} ${product.retired ? 'retired' : ''}" data-product-id="${escapeHtml(product.id)}">
+      <div class="catalog-card-top"><div><div class="catalog-code">${escapeHtml(product.sku)}</div><div class="catalog-name">${escapeHtml(product.name)}</div></div>${product.retired ? '<span class="retired-label">СНЯТО</span>' : `<span class="status-badge status-${status.key}">${escapeHtml(status.short)}</span>`}</div>
+      <div class="catalog-meta"><div class="catalog-tags"><span class="tag">${escapeHtml(product.category)}</span><span class="tag">${Number(product.length) >= 4000 ? '4 м' : '3 м'}</span></div>${product.retired ? '' : `<div class="stock-edit"><button data-stock-delta="-1" aria-label="Уменьшить остаток">−</button><input data-stock-input type="number" min="0" value="${Math.max(0, Number(product.stock) || 0)}" aria-label="Остаток ${escapeHtml(product.sku)}" /><button data-stock-delta="1" aria-label="Увеличить остаток">+</button></div>`}</div>
+      <div class="catalog-actions">${product.retired ? `<button class="mini-button" data-action="restore">↻ Вернуть в каталог</button>` : `<button class="mini-button" data-action="edit">Редактировать</button><button class="mini-button retire" data-action="retire">Снять с производства</button>`}</div>
+    </article>`;
+  }).join('');
+}
+
+function pluralize(number, one, few, many) {
+  const n = Math.abs(number) % 100;
+  if (n >= 11 && n <= 19) return many;
+  const last = n % 10;
+  return last === 1 ? one : last >= 2 && last <= 4 ? few : many;
+}
+
+function renderReports() {
+  const uniqueItems = new Set(state.operations.map((operation) => operation.productId));
+  const units = state.operations.reduce((sum, operation) => sum + Number(operation.qty || 0), 0);
+  $('#reportItemsCount').textContent = uniqueItems.size;
+  $('#reportUnitsCount').textContent = units;
+  const operations = [...state.operations].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  $('#operationsList').innerHTML = operations.length ? operations.map(operationRow).join('') : `<div class="empty-state"><div class="empty-icon">◒</div><strong>Журнал чист</strong>Добавленные приход, расход и списание появятся здесь.</div>`;
+}
+
+function renderAll() {
+  renderHeader();
+  renderMetrics();
+  renderStatusStrip();
+  renderRecent();
+  renderCatalog();
+  renderReports();
+  setActiveView(activeView, false);
+}
+
+function setActiveView(viewName, save = true) {
+  activeView = viewName;
+  $$('.view').forEach((view) => view.classList.toggle('active', view.id === `view-${viewName}`));
+  $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === viewName));
+  if (save) { state.activeView = viewName; saveState(); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openBackdrop(id) {
+  const backdrop = $(`#${id}`);
+  if (!backdrop) return;
+  backdrop.classList.remove('hidden');
+  backdrop.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBackdrop(id) {
+  const backdrop = $(`#${id}`);
+  if (!backdrop) return;
+  backdrop.classList.add('hidden');
+  backdrop.setAttribute('aria-hidden', 'true');
+  if ($$('.modal-backdrop:not(.hidden)').length === 0) document.body.style.overflow = '';
+}
+
+function showToast(message, tone = 'success') {
+  const toast = $('#toast');
+  $('#toastMessage').textContent = message;
+  $('.toast-icon', toast).textContent = tone === 'error' ? '!' : '✓';
+  $('.toast-icon', toast).style.color = tone === 'error' ? 'var(--red)' : 'var(--green)';
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function openProductModal(productId) {
+  const product = getProduct(productId);
+  if (!product) return;
+  selectedProductId = productId;
+  const status = getStatus(product);
+  $('#productModalContent').innerHTML = `<div class="product-modal-head"><p class="eyebrow">Карточка позиции · Алматы</p><div class="product-code-large" id="productModalTitle">${escapeHtml(product.sku)} <span class="tag">${escapeHtml(product.category)}</span></div><div class="product-name-large">${escapeHtml(product.name)}</div></div>
+    <div class="product-status-panel status-${status.key}"><div><div class="status-title">${escapeHtml(status.label)}</div><div class="status-note">${escapeHtml(status.note)}</div></div><div class="product-status-stock"><strong>${Math.max(0, Number(product.stock) || 0)}</strong><span>шт. на складе</span></div></div>
+    <div class="product-facts"><div class="fact"><span>Длина</span><strong>${Number(product.length) >= 4000 ? '4 м · 4000 мм' : '3 м · 3000 мм'}</strong></div><div class="fact"><span>Код сканера</span><strong>${escapeHtml(product.barcode || product.sku)}</strong></div><div class="fact"><span>Срок</span><strong>${status.key === 'green' ? 'Отгрузка' : '25–30 дней'}</strong></div></div>
+    <label class="field-label" for="operationType">Тип операции</label><div class="operation-select-row"><select id="operationType"><option value="out">Расход</option><option value="in">Приход</option><option value="writeoff">Списание на замер</option></select><input class="comment-input" id="operationComment" placeholder="Комментарий, клиент или замер" /></div>
+    <label class="field-label" for="operationQty">Количество, шт.</label><div class="quantity-control"><button type="button" id="qtyMinus" aria-label="Уменьшить количество">−</button><input class="quantity-input" id="operationQty" type="number" min="1" inputmode="numeric" value="1" /><button type="button" id="qtyPlus" aria-label="Увеличить количество">+</button></div>
+    <div class="product-primary-row"><button class="secondary-action" type="button" data-close-modal>Отмена</button><button class="primary-action" type="button" id="addOperationBtn"><span>＋</span> Добавить в смену</button></div>`;
+  openBackdrop('modalBackdrop');
+  $('#qtyMinus').addEventListener('click', () => setQuantity(-1));
+  $('#qtyPlus').addEventListener('click', () => setQuantity(1));
+  $('#addOperationBtn').addEventListener('click', addOperationFromModal);
+  $('.product-primary-row [data-close-modal]').addEventListener('click', () => closeBackdrop('modalBackdrop'));
+}
+
+function setQuantity(delta) {
+  const input = $('#operationQty');
+  const value = Math.max(1, Number(input.value || 1) + delta);
+  input.value = value;
+}
+
+function addOperationFromModal() {
+  const product = getProduct(selectedProductId);
+  const qty = Math.max(1, Math.floor(Number($('#operationQty').value) || 0));
+  const type = $('#operationType').value;
+  const comment = $('#operationComment').value.trim();
+  if (!product || !qty) return;
+  if (type !== 'in' && qty > Number(product.stock || 0)) {
+    showToast(`Недостаточно остатка: доступно ${product.stock} шт.`, 'error');
+    return;
+  }
+  product.stock = Math.max(0, Number(product.stock || 0) + (type === 'in' ? qty : -qty));
+  product.updatedAt = Date.now();
+  state.operations.push({ id: `op-${Date.now()}`, productId: product.id, sku: product.sku, name: product.name, category: product.category, length: product.length, qty, type, comment, createdAt: new Date().toISOString(), stockAfter: product.stock });
+  saveState();
+  closeBackdrop('modalBackdrop');
+  renderAll();
+  showToast(`${operationLabels[type]} добавлен: ${product.sku}`);
+}
+
+function openEditor(productId = null) {
+  $('#productForm').reset();
+  $('#editProductId').value = productId || '';
+  $('#editorEyebrow').textContent = productId ? 'Редактирование позиции' : 'Новая позиция';
+  $('#editorTitle').textContent = productId ? 'Изменить в каталоге' : 'Добавить в каталог';
+  if (productId) {
+    const product = getProduct(productId);
+    if (!product) return;
+    $('#formSku').value = product.sku;
+    $('#formName').value = product.name;
+    $('#formCategory').value = product.category;
+    $('#formLength').value = String(product.length);
+    $('#formStock').value = product.stock;
+    $('#formOrderOnly').checked = Boolean(product.orderOnly);
+    $('#formBarcode').value = product.barcode || '';
+  } else {
+    $('#formLength').value = '3000';
+    $('#formStock').value = '0';
+  }
+  openBackdrop('editorModal');
+  setTimeout(() => $('#formSku').focus(), 150);
+}
+
+function submitProductForm(event) {
+  event.preventDefault();
+  const id = $('#editProductId').value;
+  const sku = $('#formSku').value.trim();
+  const duplicate = state.products.find((product) => product.sku.toLowerCase() === sku.toLowerCase() && product.id !== id);
+  if (duplicate) { showToast('Такой артикул уже есть в каталоге', 'error'); return; }
+  const data = { sku, name: $('#formName').value.trim(), category: $('#formCategory').value, length: Number($('#formLength').value), stock: Math.max(0, Number($('#formStock').value) || 0), orderOnly: $('#formOrderOnly').checked, barcode: $('#formBarcode').value.trim() || sku, updatedAt: Date.now() };
+  if (!data.sku || !data.name) { showToast('Заполните артикул и название', 'error'); return; }
+  if (id) {
+    const product = getProduct(id);
+    Object.assign(product, data);
+    showToast('Позиция обновлена');
+  } else {
+    state.products.push({ id: `p-${Date.now()}`, ...data, retired: false });
+    showToast('Новая позиция добавлена');
+  }
+  saveState();
+  closeBackdrop('editorModal');
+  renderAll();
+}
+
+function handleCatalogClick(event) {
+  const card = event.target.closest('[data-product-id]');
+  if (!card) return;
+  const product = getProduct(card.dataset.productId);
+  if (!product) return;
+  const action = event.target.closest('[data-action]')?.dataset.action;
+  if (action === 'edit') return openEditor(product.id);
+  if (action === 'retire') {
+    if (confirm(`Снять «${product.sku}» с производства? Позиция останется в архиве.`)) {
+      product.retired = true; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция перенесена в архив');
+    }
+    return;
+  }
+  if (action === 'restore') {
+    product.retired = false; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция возвращена в каталог');
+  }
+  if (event.target.closest('[data-stock-delta]')) {
+    const delta = Number(event.target.closest('[data-stock-delta]').dataset.stockDelta);
+    product.stock = Math.max(0, Number(product.stock || 0) + delta);
+    product.updatedAt = Date.now(); saveState(); renderAll();
+  }
+}
+
+function handleCatalogStockInput(event) {
+  if (!event.target.matches('[data-stock-input]')) return;
+  const card = event.target.closest('[data-product-id]');
+  const product = getProduct(card?.dataset.productId);
+  if (!product) return;
+  product.stock = Math.max(0, Math.floor(Number(event.target.value) || 0));
+  product.updatedAt = Date.now();
+  saveState();
+  renderMetrics(); renderStatusStrip(); renderRecent(); renderReports();
+}
+
+function renderSearchResults() {
+  const input = $('#searchInput');
+  const query = input.value.trim().toLowerCase();
+  $('#clearSearch').classList.toggle('hidden', !query);
+  if (!query) { $('#searchResults').classList.add('hidden'); return; }
+  const results = getActiveProducts().filter((product) => `${product.sku} ${product.name} ${product.category}`.toLowerCase().includes(query)).slice(0, 7);
+  $('#searchResults').classList.remove('hidden');
+  $('#searchResults').innerHTML = results.length ? results.map((product) => {
+    const status = getStatus(product);
+    return `<div class="search-result" data-search-product="${escapeHtml(product.id)}"><span class="status-badge status-${status.key}">${escapeHtml(status.short)}</span><div class="result-main"><div class="result-code">${escapeHtml(product.sku)}</div><div class="result-name">${escapeHtml(product.name)}</div></div><div class="result-stock"><strong>${product.stock}</strong>шт.</div></div>`;
+  }).join('') : '<div class="no-results">Позиция не найдена. Проверьте артикул или добавьте ее в каталог.</div>';
+}
+
+function findProductByCode(code) {
+  const normalized = String(code || '').trim().toLowerCase();
+  return getActiveProducts().find((product) => [product.sku, product.barcode, product.name].some((value) => String(value || '').toLowerCase() === normalized));
+}
+
+async function startScanner() {
+  openBackdrop('scannerModal');
+  $('#scannerHint').textContent = 'Запрашиваем доступ к камере…';
+  if (!window.Html5Qrcode) {
+    $('#scannerHint').textContent = 'Библиотека сканирования недоступна. Используйте ввод кода вручную.';
+    return;
+  }
+  try {
+    if (scannerInstance) await stopScanner();
+    scannerInstance = new Html5Qrcode('reader');
+    await scannerInstance.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 }, aspectRatio: 1.25 }, async (decodedText) => {
+      const product = findProductByCode(decodedText);
+      await stopScanner();
+      closeBackdrop('scannerModal');
+      if (product) {
+        openProductModal(product.id);
+      } else {
+        $('#searchInput').value = decodedText;
+        renderSearchResults();
+        showToast(`Код ${decodedText} не найден в каталоге`, 'error');
+      }
+    }, () => {});
+    scannerRunning = true;
+    $('#scannerHint').textContent = 'Наведите рамку на штрих-код или QR-код позиции.';
+  } catch (error) {
+    console.warn('Camera scanner error', error);
+    $('#scannerHint').textContent = 'Не удалось открыть камеру. Проверьте разрешение или введите код вручную.';
+  }
+}
+
+async function stopScanner() {
+  if (!scannerInstance) return;
+  try { if (scannerRunning) await scannerInstance.stop(); scannerInstance.clear(); } catch (error) { console.warn('Scanner stop error', error); }
+  scannerRunning = false;
+  scannerInstance = null;
+}
+
+async function manualCodeLookup() {
+  const code = prompt('Введите артикул или код сканирования');
+  if (!code) return;
+  await stopScanner();
+  const product = findProductByCode(code);
+  if (product) {
+    closeBackdrop('scannerModal');
+    openProductModal(product.id);
+  } else {
+    showToast('Позиция с таким кодом не найдена', 'error');
+  }
+}
+
+function normalizedKey(value) {
+  return String(value ?? '').toLowerCase().replace(/[\s_\-./№:()]/g, '');
+}
+
+function readRowValue(row, aliases) {
+  const entries = Object.entries(row);
+  const keys = aliases.map(normalizedKey);
+  const entry = entries.find(([key]) => keys.includes(normalizedKey(key)));
+  return entry ? entry[1] : '';
+}
+
+function parseImportedLength(value) {
+  const stringValue = String(value ?? '').toLowerCase();
+  return stringValue.includes('4') || stringValue.includes('4000') ? 4000 : 3000;
+}
+
+function parseImportedCategory(value) {
+  const valueString = String(value ?? '').toLowerCase();
+  if (valueString.includes('лувер') || valueString.includes('louver')) return 'Лувер';
+  if (valueString.includes('проф')) return 'Профиль';
+  return 'Панель';
+}
+
+async function importExcel(file) {
+  if (!file) return;
+  if (!window.XLSX) { showToast('SheetJS не загрузился', 'error'); return; }
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    let imported = 0;
+    rows.forEach((row) => {
+      const sku = String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура']) || '').trim();
+      if (!sku) return;
+      const name = String(readRowValue(row, ['Название', 'Наименование', 'Товар', 'Name']) || sku).trim();
+      const category = parseImportedCategory(readRowValue(row, ['Категория', 'Тип', 'Category']));
+      const length = parseImportedLength(readRowValue(row, ['Длина', 'Размер', 'Length']));
+      const rawStock = readRowValue(row, ['Остаток', 'Остаток на складе', 'Количество', 'Stock', 'Qty']);
+      const stock = Math.max(0, Number(String(rawStock).replace(',', '.').replace(/[^\d.-]/g, '')) || 0);
+      const rawOrder = String(readRowValue(row, ['Только под заказ', 'Спецзаказ', 'Статус', 'Order only'])).toLowerCase();
+      const orderOnly = length >= 4000 || rawOrder.includes('заказ') || rawOrder.includes('спец') || rawOrder === 'да' || rawOrder === 'true';
+      const barcode = String(readRowValue(row, ['Штрихкод', 'Barcode', 'QR', 'Код сканера']) || sku).trim();
+      const existing = state.products.find((product) => product.sku.toLowerCase() === sku.toLowerCase());
+      if (existing) Object.assign(existing, { name, category, length, stock, orderOnly, barcode, retired: false, updatedAt: Date.now() });
+      else state.products.push({ id: `p-${Date.now()}-${imported}`, sku, name, category, length, stock, orderOnly, barcode, retired: false, updatedAt: Date.now() });
+      imported++;
+    });
+    saveState(); renderAll(); showToast(`Импортировано позиций: ${imported}`);
+  } catch (error) {
+    console.error(error);
+    showToast('Не удалось прочитать Excel-файл', 'error');
+  }
+}
+
+function exportExcel() {
+  if (!window.XLSX) { showToast('SheetJS не загрузился', 'error'); return; }
+  if (!state.operations.length) { showToast('Добавьте хотя бы одну операцию', 'error'); return; }
+  const rows = state.operations.map((operation) => {
+    const product = getProduct(operation.productId);
+    const status = product ? getStatus(product) : getStatus({ length: operation.length, stock: operation.stockAfter, orderOnly: false });
+    return { 'Дата': formatDate(operation.createdAt, true), 'Артикул': operation.sku, 'Название': operation.name, 'Категория': operation.category, 'Длина': Number(operation.length) >= 4000 ? '4 м / 4000 мм' : '3 м / 3000 мм', 'Количество, шт.': operation.qty, 'Операция': operationLabels[operation.type], 'Остаток после': operation.stockAfter, 'Статус': status.label, 'Комментарий по срокам': status.comment, 'Комментарий': operation.comment || '' };
+  });
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [{ wch: 17 }, { wch: 15 }, { wch: 34 }, { wch: 14 }, { wch: 17 }, { wch: 16 }, { wch: 23 }, { wch: 16 }, { wch: 22 }, { wch: 36 }, { wch: 28 }];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Отчет за смену');
+  XLSX.writeFile(workbook, `FORONE_отчет_${formatDate(Date.now()).replaceAll('.', '-')}.xlsx`);
+  showToast('Отчет .xlsx скачан');
+}
+
+function clearOperations() {
+  if (!state.operations.length) return showToast('Журнал уже пуст');
+  if (!confirm('Очистить все операции текущей смены? Остатки каталога не изменятся.')) return;
+  state.operations = [];
+  saveState(); renderAll(); showToast('Журнал очищен');
+}
+
+function initEvents() {
+  $$('.nav-item').forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
+  $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
+  $('#scanBtn').addEventListener('click', startScanner);
+  $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
+  $('#manualCodeBtn').addEventListener('click', manualCodeLookup);
+  $('#searchInput').addEventListener('input', renderSearchResults);
+  $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });
+  $('#searchResults').addEventListener('click', (event) => { const result = event.target.closest('[data-search-product]'); if (result) { $('#searchResults').classList.add('hidden'); openProductModal(result.dataset.searchProduct); } });
+  $('#catalogSearch').addEventListener('input', renderCatalog);
+  $('#categoryFilter').addEventListener('change', renderCatalog);
+  $('#catalogList').addEventListener('click', handleCatalogClick);
+  $('#catalogList').addEventListener('change', handleCatalogStockInput);
+  $('#addProductBtn').addEventListener('click', () => openEditor());
+  $('#productForm').addEventListener('submit', submitProductForm);
+  $('#importBtn').addEventListener('click', () => $('#fileInput').click());
+  $('#fileInput').addEventListener('change', (event) => { importExcel(event.target.files[0]); event.target.value = ''; });
+  $('#exportBtn').addEventListener('click', exportExcel);
+  $('#clearOperationsBtn').addEventListener('click', clearOperations);
+  $('#openSettingsBtn').addEventListener('click', () => openBackdrop('infoModal'));
+  $$('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeBackdrop('modalBackdrop')));
+  $$('[data-close-editor]').forEach((button) => button.addEventListener('click', () => closeBackdrop('editorModal')));
+  $$('[data-close-info]').forEach((button) => button.addEventListener('click', () => closeBackdrop('infoModal')));
+  $$('.modal-backdrop').forEach((backdrop) => backdrop.addEventListener('click', (event) => { if (event.target === backdrop && backdrop.id !== 'scannerModal') closeBackdrop(backdrop.id); }));
+  document.addEventListener('keydown', async (event) => { if (event.key === 'Escape') { await stopScanner(); $$('.modal-backdrop:not(.hidden)').forEach((backdrop) => closeBackdrop(backdrop.id)); } });
+  window.addEventListener('online', updateConnectionLabel);
+  window.addEventListener('offline', updateConnectionLabel);
+}
+
+function registerOfflineApp() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch((error) => console.warn('SW registration failed', error));
+}
+
+initEvents();
+renderAll();
+registerOfflineApp();
+
+  </script>
 </body>
 </html>
