@@ -25,6 +25,8 @@ let visualTimer = null;
 let visualBusy = false;
 let visualMatched = false;
 let pendingScan = null;
+let torchEnabled = false;
+let torchTrack = null;
 let toastTimer = null;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -375,6 +377,44 @@ function stopVisualRecognition() {
   setVisualStatus('', false);
 }
 
+function updateTorchButton() {
+  const button = $('#torchBtn');
+  const label = $('#torchLabel');
+  if (!button || !label) return;
+  button.classList.toggle('active', torchEnabled);
+  button.setAttribute('aria-pressed', String(torchEnabled));
+  label.textContent = torchEnabled ? 'Подсветка включена' : 'Подсветка';
+}
+
+function getCameraTrack() {
+  const video = $('#reader video');
+  return video?.srcObject?.getVideoTracks?.()[0] || null;
+}
+
+async function toggleTorch() {
+  const track = torchTrack || getCameraTrack();
+  if (!track) {
+    showToast('Сначала включите камеру', 'error');
+    return;
+  }
+  const capabilities = track.getCapabilities?.();
+  if (!capabilities?.torch) {
+    showToast('Фонарик не поддерживается этой камерой', 'error');
+    return;
+  }
+  try {
+    torchTrack = track;
+    torchEnabled = !torchEnabled;
+    await track.applyConstraints({ advanced: [{ torch: torchEnabled }] });
+    updateTorchButton();
+    showToast(torchEnabled ? 'Подсветка включена' : 'Подсветка выключена');
+  } catch (error) {
+    torchEnabled = false;
+    updateTorchButton();
+    showToast('Не удалось включить подсветку камеры', 'error');
+  }
+}
+
 function renderScanSuggestion(candidate) {
   const button = $('#scanSuggestion');
   if (!button) return;
@@ -475,6 +515,9 @@ function startVisualRecognition() {
 async function startScanner() {
   openBackdrop('scannerModal');
   visualMatched = false;
+  torchEnabled = false;
+  torchTrack = null;
+  updateTorchButton();
   renderScanSuggestion(null);
   $('#scannerHint').textContent = 'Запрашиваем доступ к камере…';
   if (!window.Html5Qrcode) {
@@ -490,6 +533,7 @@ async function startScanner() {
       renderScanSuggestion({ kind: 'code', code: decodedText, product });
     }, () => {});
     scannerRunning = true;
+    torchTrack = getCameraTrack();
     $('#scannerHint').textContent = 'Наведите рамку на код или лицевую поверхность панели.';
     startVisualRecognition();
   } catch (error) {
@@ -500,6 +544,12 @@ async function startScanner() {
 
 async function stopScanner() {
   stopVisualRecognition();
+  if (torchTrack && torchEnabled) {
+    try { await torchTrack.applyConstraints({ advanced: [{ torch: false }] }); } catch (error) { console.warn('Torch reset error', error); }
+  }
+  torchEnabled = false;
+  torchTrack = null;
+  updateTorchButton();
   if (!scannerInstance) return;
   try { if (scannerRunning) await scannerInstance.stop(); scannerInstance.clear(); } catch (error) { console.warn('Scanner stop error', error); }
   scannerRunning = false;
@@ -660,6 +710,7 @@ function initEvents() {
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
   $('#scanSuggestion').addEventListener('click', acceptScanSuggestion);
+  $('#torchBtn').addEventListener('click', toggleTorch);
   $('#manualCodeBtn').addEventListener('click', manualCodeLookup);
   $('#searchInput').addEventListener('input', renderSearchResults);
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearchResults(); $('#searchInput').focus(); });
