@@ -1,4 +1,4 @@
-const CACHE_NAME = 'forone-stock-v10';
+const CACHE_NAME = 'forone-stock-v11';
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './visual-recognition.js',
   './manifest.json', './manus-routes.json', './vendor/html5-qrcode.min.js', './vendor/xlsx.full.min.js'

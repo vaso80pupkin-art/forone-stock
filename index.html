@@ -156,7 +156,23 @@
   </div>
 
   <div class="modal-backdrop hidden" id="infoModal" aria-hidden="true">
-    <div class="modal-sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-handle"></div><button class="modal-close" data-close-info aria-label="Закрыть">×</button><div class="info-logo">F<span>/</span>O</div><p class="eyebrow">FORONE.KZ · STOCK CONTROL</p><h2 id="infoTitle">Склад всегда под рукой.</h2><p class="modal-copy">Работает офлайн, сохраняет данные на этом устройстве и помогает быстро проверить остатки в Алматы.</p><div class="info-list"><div><span>⌁</span><p><b>Автосохранение</b><small>Каталог и смена в localStorage</small></p></div><div><span>◈</span><p><b>Статусы в цвете</b><small>Много, мало, нет и спецзаказ</small></p></div><div><span>⇄</span><p><b>Excel</b><small>Импорт базы и отчет .xlsx</small></p></div></div><div class="google-sync-card"><p class="eyebrow">Источник остатков</p><label class="toggle-field"><span>Автоматически обновлять из Google Sheets</span><span class="switch"><input id="googleAutoSync" type="checkbox" /><i></i></span></label><input id="googleSheetUrl" class="google-sheet-url" type="url" placeholder="Ссылка на Google-таблицу" /><div class="google-sync-row"><button class="secondary-action" id="syncGoogleBtn">Обновить сейчас</button><small id="googleSyncStatus">Источник не подключён</small></div></div><button class="secondary-action full-width" id="openBackupBtn">Резервная копия и перенос базы</button><button class="secondary-action full-width" data-close-info>Понятно</button></div>
+    <div class="modal-sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-handle"></div><button class="modal-close" data-close-info aria-label="Закрыть">×</button><div class="info-logo">F<span>/</span>O</div><p class="eyebrow">FORONE.KZ · STOCK CONTROL</p><h2 id="infoTitle">Склад всегда под рукой.</h2><p class="modal-copy">Работает офлайн, сохраняет данные на этом устройстве и помогает быстро проверить остатки в Алматы.</p><div class="info-list"><div><span>⌁</span><p><b>Автосохранение</b><small>Каталог и смена в localStorage</small></p></div><div><span>◈</span><p><b>Статусы в цвете</b><small>Много, мало, нет и спецзаказ</small></p></div><div><span>⇄</span><p><b>Excel</b><small>Импорт базы и отчет .xlsx</small></p></div></div><div class="google-sync-card"><p class="eyebrow">Источник остатков</p><label class="toggle-field"><span>Автоматически обновлять из Google Sheets</span><span class="switch"><input id="googleAutoSync" type="checkbox" /><i></i></span></label><input id="googleSheetUrl" class="google-sheet-url" type="url" placeholder="Ссылка на Google-таблицу" /><div class="google-sync-row"><button class="secondary-action" id="syncGoogleBtn">Обновить сейчас</button><small id="googleSyncStatus">Источник не подключён</small></div></div><button class="primary-action full-width" id="openHelpBtn">Как работать с программой</button><button class="secondary-action full-width" id="openBackupBtn">Резервная копия и перенос базы</button><button class="secondary-action full-width" data-close-info>Понятно</button></div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="helpModal" aria-hidden="true">
+    <div class="modal-sheet help-sheet" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modal-handle"></div><button class="modal-close" data-close-help aria-label="Закрыть">×</button>
+      <p class="eyebrow">Быстрый старт</p><h2 id="helpTitle">Как работать</h2>
+      <div class="help-content">
+        <section><b>1. Проверить наличие</b><p>Выберите режим «Проверить наличие», нажмите «Сканировать камерой» или найдите товар по артикулу. Приложение покажет остаток, резерв и доступное количество.</p></section>
+        <section><b>2. Оформить движение</b><p>«Приход» увеличивает остаток, «Расход» уменьшает его, а «Списание на замер» фиксирует выдачу на замер. Сначала выберите режим, затем отсканируйте товар.</p></section>
+        <section><b>3. Работать с каталогом</b><p>Во вкладке «Каталог» используйте поиск, категорию и быстрые фильтры: нет в наличии, мало, панели 4 м, луверы и недавно изменённые.</p></section>
+        <section><b>4. Резервировать товар</b><p>Откройте карточку позиции, укажите поле «Зарезервировано» и сохраните. Доступно к продаже считается как остаток минус резерв.</p></section>
+        <section><b>5. Обновлять из Google Таблиц</b><p>В информации о приложении нажмите «Обновить сейчас». Автоматически источник обновляется через Apps Script каждые 15 минут.</p></section>
+        <section><b>6. Сохранить копию</b><p>Откройте «Резервная копия и перенос базы», чтобы сохранить JSON, восстановить базу или передать её на другой телефон.</p></section>
+      </div>
+      <button class="secondary-action full-width" data-close-help>Закрыть</button>
+    </div>
   </div>
 
   <div class="global-tooltip" id="globalTooltip" role="tooltip" aria-hidden="true"></div>
