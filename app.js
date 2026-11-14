@@ -88,7 +88,14 @@ function getActiveProducts() {
 
 function updateConnectionLabel() {
   const label = $('#connectionLabel');
-  if (label) label.textContent = 'Локально сохранено';
+  if (!label) return;
+  let saved = false;
+  try { saved = Boolean(localStorage.getItem(STORAGE_KEY)); } catch (error) { saved = false; }
+  if (!saved) {
+    label.textContent = navigator.onLine ? 'Онлайн · сохранение ещё не создано' : 'Офлайн · проверьте сохранение';
+    return;
+  }
+  label.textContent = navigator.onLine ? 'Онлайн · локально сохранено' : 'Офлайн · локально сохранено';
 }
 
 function renderHeader() {
@@ -505,10 +512,9 @@ async function manualCodeLookup() {
   await stopScanner();
   const product = findProductByCode(code);
   if (product) {
-    closeBackdrop('scannerModal');
-    openProductModal(product.id);
+    handleCodeMatch(code);
   } else {
-    showToast('Позиция с таким кодом не найдена', 'error');
+    handleCodeMatch(code);
   }
 }
 
@@ -535,23 +541,81 @@ function parseImportedCategory(value) {
   return 'Панель';
 }
 
+function parseImportedStock(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  let text = String(value ?? '').trim().replace(/\u00a0/g, '').replace(/\s/g, '').replace(/[^\d,.-]/g, '');
+  if (!text) return 0;
+  const comma = text.lastIndexOf(','), dot = text.lastIndexOf('.');
+  const lastSeparator = Math.max(comma, dot);
+  const fractionDigits = lastSeparator >= 0 ? text.length - lastSeparator - 1 : 0;
+  if (comma >= 0 && dot >= 0) {
+    text = fractionDigits <= 2 ? text.replace(/[.,](?=.*[.,])/g, '').replace(',', '.') : text.replace(/[.,]/g, '');
+  } else if (fractionDigits > 0 && fractionDigits <= 2) {
+    text = text.replace(',', '.');
+  } else {
+    text = text.replace(/[.,]/g, '');
+  }
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
+}
+
+function isArticleHeader(value) {
+  const key = normalizedKey(value);
+  return ['артикул', 'sku', 'код', 'article', 'номенклатура', 'colorno'].includes(key);
+}
+
+function isStockHeader(value) {
+  const key = normalizedKey(value);
+  return ['остаток', 'остатокнаскладе', 'остатокпослепоступлениятовара', 'количество', 'колв', 'qty', 'stock', 'алматыналичии'].includes(key);
+}
+
+function inspectInventorySheet(sheet) {
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+  let headerIndex = -1;
+  for (let index = 0; index < Math.min(matrix.length, 40); index += 1) {
+    const row = matrix[index] || [];
+    if (row.some(isArticleHeader) && row.some(isStockHeader)) { headerIndex = index; break; }
+  }
+  if (headerIndex < 0) return { rows: [], score: 0, headerIndex: -1 };
+  const rows = XLSX.utils.sheet_to_json(sheet, { range: headerIndex, defval: '' });
+  const validRows = rows.filter((row) => String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.'])).trim());
+  const numericStockRows = validRows.filter((row) => String(readRowValue(row, ['Остаток', 'Остаток на складе', 'Остаток на складе после поступления товара', 'Количество', 'Кол-во', 'Stock', 'Qty', 'Алматы в наличии'])).trim());
+  return { rows, score: 20 + validRows.length + numericStockRows.length * 2, headerIndex };
+}
+
 async function importExcel(file) {
   if (!file) return;
   if (!window.XLSX) { showToast('SheetJS не загрузился', 'error'); return; }
   try {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const candidates = workbook.SheetNames.map((name, order) => ({ name, order, ...inspectInventorySheet(workbook.Sheets[name]) }))
+      .filter((candidate) => candidate.rows.length)
+      .sort((a, b) => b.score - a.score || a.order - b.order);
+    if (!candidates.length) {
+      showToast('Не найден лист с колонками «Артикул» и «Остаток»', 'error');
+      return;
+    }
+    const preferred = candidates.filter((candidate) => /остат|налич|октябр|ноябр|новая|исток|ассортимент/i.test(candidate.name));
+    const shortlist = [...new Map([...preferred, ...candidates].map((candidate) => [candidate.name, candidate])).values()].slice(0, 10);
+    let selectedSheet = shortlist[0];
+    if (shortlist.length > 1) {
+      const menu = shortlist.map((candidate, index) => `${index + 1}. ${candidate.name} (${candidate.rows.length} строк)`).join('\n');
+      const answer = prompt(`Выберите лист с актуальными остатками:\n\n${menu}\n\nВведите номер листа`, '1');
+      if (answer === null) return;
+      const index = Math.max(0, Math.min(shortlist.length - 1, (parseInt(answer, 10) || 1) - 1));
+      selectedSheet = shortlist[index];
+    }
+    const rows = selectedSheet.rows;
     let imported = 0;
     rows.forEach((row) => {
-      const sku = String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура']) || '').trim();
+      const sku = String(readRowValue(row, ['Артикул', 'SKU', 'Код', 'Article', 'Номенклатура', 'COLOR NO.']) || '').trim();
       if (!sku) return;
-      const name = String(readRowValue(row, ['Название', 'Наименование', 'Товар', 'Name']) || sku).trim();
+      const name = String(readRowValue(row, ['Название', 'Наименование', 'Товар', 'Name', 'PRODUCT NAME', 'Описание']) || sku).trim();
       const category = parseImportedCategory(readRowValue(row, ['Категория', 'Тип', 'Category']));
       const length = parseImportedLength(readRowValue(row, ['Длина', 'Размер', 'Length']));
-      const rawStock = readRowValue(row, ['Остаток', 'Остаток на складе', 'Количество', 'Stock', 'Qty']);
-      const stock = Math.max(0, Number(String(rawStock).replace(',', '.').replace(/[^\d.-]/g, '')) || 0);
+      const rawStock = readRowValue(row, ['Остаток', 'Остаток на складе', 'Остаток на складе после поступления товара', 'Количество', 'Кол-во', 'Stock', 'Qty', 'Алматы в наличии']);
+      const stock = parseImportedStock(rawStock);
       const rawOrder = String(readRowValue(row, ['Только под заказ', 'Спецзаказ', 'Статус', 'Order only'])).toLowerCase();
       const orderOnly = length >= 4000 || rawOrder.includes('заказ') || rawOrder.includes('спец') || rawOrder === 'да' || rawOrder === 'true';
       const barcode = String(readRowValue(row, ['Штрихкод', 'Barcode', 'QR', 'Код сканера']) || sku).trim();
@@ -560,7 +624,7 @@ async function importExcel(file) {
       else state.products.push({ id: `p-${Date.now()}-${imported}`, sku, name, category, length, stock, orderOnly, barcode, retired: false, updatedAt: Date.now() });
       imported++;
     });
-    saveState(); renderAll(); showToast(`Импортировано позиций: ${imported}`);
+    saveState(); renderAll(); showToast(`Лист «${selectedSheet.name}»: импортировано позиций: ${imported}`);
   } catch (error) {
     console.error(error);
     showToast('Не удалось прочитать Excel-файл', 'error');
