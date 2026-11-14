@@ -799,6 +799,13 @@ function initButtonHints() {
     button.addEventListener('pointerleave', () => button.classList.remove('tooltip-visible'));
     button.addEventListener('pointerdown', () => button.classList.remove('tooltip-visible'));
   });
+  document.addEventListener('pointermove', (event) => {
+    if (event.pointerType !== 'pen') return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('button[data-tooltip]');
+    $$('button.tooltip-visible').forEach((button) => { if (button !== target) button.classList.remove('tooltip-visible'); });
+    if (target) target.classList.add('tooltip-visible');
+  });
+  document.addEventListener('pointerleave', (event) => { if (event.pointerType === 'pen') $$('button.tooltip-visible').forEach((button) => button.classList.remove('tooltip-visible')); });
 }
 
 function initEvents() {
