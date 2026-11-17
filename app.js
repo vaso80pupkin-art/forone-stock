@@ -20,6 +20,8 @@ const monthNames = ['января', 'февраля', 'марта', 'апрел�
 
 let state = loadState();
 let activeView = state.activeView || 'scanner';
+const THEME_KEY = 'forone-stock-theme-v1';
+let activeTheme = localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
 let selectedProductId = null;
 let scannerInstance = null;
 let scannerRunning = false;
@@ -37,6 +39,30 @@ let catalogFilters = { length: 'all', availability: 'all', status: 'active' };
 let cameraZoom = 1;
 let enhanceCamera = true;
 let pendingImport = null;
+
+function applyTheme(theme = activeTheme) {
+  activeTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = activeTheme;
+  const themeMeta = $('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.setAttribute('content', activeTheme === 'light' ? '#f3f6f2' : '#0b171a');
+  const button = $('#themeToggleBtn');
+  const icon = $('#themeToggleIcon');
+  const label = $('#themeToggleLabel');
+  if (!button || !icon || !label) return;
+  const light = activeTheme === 'light';
+  icon.textContent = light ? '☀' : '☾';
+  label.textContent = light ? 'Светлая' : 'Тёмная';
+  const nextLabel = light ? 'Включить тёмную тему' : 'Включить светлую тему';
+  button.title = nextLabel;
+  button.setAttribute('aria-label', nextLabel);
+  button.dataset.tooltip = nextLabel;
+}
+
+function toggleTheme() {
+  activeTheme = activeTheme === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, activeTheme);
+  applyTheme();
+}
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
@@ -801,6 +827,7 @@ const buttonHelpById = {
   clearOperationsBtn: 'Удалить журнал операций текущей смены',
   syncGoogleBtn: 'Загрузить остатки из Google Таблицы сейчас',
   openBackupBtn: 'Открыть сохранение и перенос резервной копии',
+  themeToggleBtn: 'Переключить светлую и тёмную тему',
   backupSaveBtn: 'Скачать полную базу на телефон',
   backupRestoreBtn: 'Восстановить базу из JSON-файла',
   backupShareBtn: 'Передать резервную копию на другой телефон',
@@ -855,7 +882,9 @@ function initButtonHints() {
 
 function initEvents() {
   initButtonHints();
-  $$('.nav-item').forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
+  applyTheme();
+  $$('.nav-item').filter((item) => item.dataset.view).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
+  $('#themeToggleBtn').addEventListener('click', toggleTheme);
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });
