@@ -176,10 +176,35 @@ function renderStatusStrip() {
   const counts = { green: 0, yellow: 0, red: 0, blue: 0 };
   active.forEach((product) => counts[getStatus(product).key]++);
   $('#statusStrip').innerHTML = `
-    <div class="status-box status-green"><div class="status-num">${counts.green}</div><div class="status-name">В наличии</div></div>
-    <div class="status-box status-yellow"><div class="status-num">${counts.yellow}</div><div class="status-name">Мало</div></div>
-    <div class="status-box status-red"><div class="status-num">${counts.red}</div><div class="status-name">Нет</div></div>
-    <div class="status-box status-blue"><div class="status-num">${counts.blue}</div><div class="status-name">Спецзаказ</div></div>`;
+    <button class="status-box status-green" type="button" data-dashboard-filter="in" aria-label="Открыть товары в наличии"><div class="status-num">${counts.green}</div><div class="status-name">В наличии</div></button>
+    <button class="status-box status-yellow" type="button" data-dashboard-filter="low" aria-label="Открыть товары с малым остатком"><div class="status-num">${counts.yellow}</div><div class="status-name">Мало</div></button>
+    <button class="status-box status-red" type="button" data-dashboard-filter="out" aria-label="Открыть товары без остатка"><div class="status-num">${counts.red}</div><div class="status-name">Нет</div></button>
+    <button class="status-box status-blue" type="button" data-dashboard-filter="order" aria-label="Открыть товары под заказ"><div class="status-num">${counts.blue}</div><div class="status-name">Спецзаказ</div></button>`;
+}
+
+function openDashboardFilter(filter) {
+  setActiveView('catalog');
+  catalogQuickFilter = 'all';
+  catalogFilters = { length: 'all', availability: 'all', status: 'active' };
+  $('#catalogSearch').value = '';
+  $('#categoryFilter').value = 'all';
+  if (filter === 'catalog') {
+    catalogFilters.status = 'active';
+  } else if (filter === 'attention') {
+    catalogFilters.availability = 'attention';
+  } else if (filter === 'reports') {
+    setActiveView('reports');
+    return;
+  } else if (['in', 'low', 'out'].includes(filter)) {
+    catalogFilters.availability = filter;
+  } else if (filter === 'order') {
+    catalogFilters.status = 'order';
+  }
+  $('#lengthFilter').value = catalogFilters.length;
+  $('#availabilityFilter').value = catalogFilters.availability;
+  $('#statusFilter').value = catalogFilters.status;
+  $$('.quick-filter').forEach((item) => item.classList.toggle('active', item.dataset.filter === 'all'));
+  renderCatalog();
 }
 
 function operationRow(operation) {
@@ -206,14 +231,14 @@ function renderCatalog() {
     const quick = catalogQuickFilter;
     const quickOk = quick === 'all' || (quick === 'out' && available === 0) || (quick === 'low' && available > 0 && available <= 10) || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
     const lengthOk = catalogFilters.length === 'all' || Number(product.length) === Number(catalogFilters.length);
-    const availabilityOk = catalogFilters.availability === 'all' || (catalogFilters.availability === 'in' && available > 10) || (catalogFilters.availability === 'low' && available > 0 && available <= 10) || (catalogFilters.availability === 'out' && available === 0);
+    const availabilityOk = catalogFilters.availability === 'all' || (catalogFilters.availability === 'in' && available > 10) || (catalogFilters.availability === 'low' && available > 0 && available <= 10) || (catalogFilters.availability === 'out' && available === 0) || (catalogFilters.availability === 'attention' && available <= 10);
     const statusOk = catalogFilters.status === 'all' || (catalogFilters.status === 'active' && !product.retired) || (catalogFilters.status === 'order' && !product.retired && (product.orderOnly || Number(product.length) >= 4000)) || (catalogFilters.status === 'reserved' && !product.retired && Number(product.reserved || 0) > 0) || (catalogFilters.status === 'archived' && Boolean(product.retired));
     return quickOk && lengthOk && availabilityOk && statusOk && (category === 'all' || product.category === category) && (!query || haystack.includes(query));
   }).sort((a, b) => a.sku.localeCompare(b.sku, 'ru'));
   $('#catalogSummary').textContent = `${products.length} ${pluralize(products.length, 'позиция', 'позиции', 'позиций')}`;
   const filterActive = catalogFilters.length !== 'all' || catalogFilters.availability !== 'all' || catalogFilters.status !== 'active' || catalogQuickFilter !== 'all' || category !== 'all' || Boolean(query);
   $('#resetFiltersBtn')?.classList.toggle('hidden', !filterActive);
-  if ($('#filterSummary')) { const labels = []; if (catalogFilters.length !== 'all') labels.push(catalogFilters.length === '4000' ? '4 м' : '3 м'); if (catalogFilters.availability !== 'all') labels.push({ in: 'В наличии', low: 'Мало', out: 'Нет' }[catalogFilters.availability]); if (catalogFilters.status !== 'active') labels.push({ all: 'Все статусы', order: 'Под заказ', reserved: 'С резервом', archived: 'Архив' }[catalogFilters.status]); $('#filterSummary').textContent = labels.length ? `Фильтры: ${labels.join(' · ')}` : ''; $('#filterSummary').classList.toggle('hidden', labels.length === 0); }
+  if ($('#filterSummary')) { const labels = []; if (catalogFilters.length !== 'all') labels.push(catalogFilters.length === '4000' ? '4 м' : '3 м'); if (catalogFilters.availability !== 'all') labels.push({ in: 'В наличии', low: 'Мало', out: 'Нет', attention: 'Нужен контроль' }[catalogFilters.availability]); if (catalogFilters.status !== 'active') labels.push({ all: 'Все статусы', order: 'Под заказ', reserved: 'С резервом', archived: 'Архив' }[catalogFilters.status]); $('#filterSummary').textContent = labels.length ? `Фильтры: ${labels.join(' · ')}` : ''; $('#filterSummary').classList.toggle('hidden', labels.length === 0); }
   if (!products.length) {
     $('#catalogList').innerHTML = `<div class="empty-state"><div class="empty-icon">⌕</div><strong>Ничего не найдено</strong>Измените фильтр или добавьте новую позицию.</div>`;
     return;
@@ -885,6 +910,12 @@ function initEvents() {
   applyTheme();
   $$('.nav-item').filter((item) => item.dataset.view).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#themeToggleBtn').addEventListener('click', toggleTheme);
+  $('#view-scanner').addEventListener('click', (event) => {
+    const action = event.target.closest('[data-dashboard-action]')?.dataset.dashboardAction;
+    const filter = event.target.closest('[data-dashboard-filter]')?.dataset.dashboardFilter;
+    if (action) openDashboardFilter(action);
+    else if (filter) openDashboardFilter(filter);
+  });
   $$('[data-view]').filter((item) => !item.classList.contains('nav-item')).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#scanBtn').addEventListener('click', startScanner);
   $('#closeScannerBtn').addEventListener('click', async () => { await stopScanner(); closeBackdrop('scannerModal'); });

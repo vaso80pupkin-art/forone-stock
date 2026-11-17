@@ -58,9 +58,9 @@
         <div class="search-results hidden" id="searchResults"></div>
 
         <div class="metrics-grid">
-          <article class="metric-card metric-total"><div class="metric-label">В каталоге</div><div class="metric-value" id="metricProducts">0</div><div class="metric-foot">активных позиций <span>↗</span></div></article>
-          <article class="metric-card metric-alert"><div class="metric-label">Нужен контроль</div><div class="metric-value" id="metricAlerts">0</div><div class="metric-foot">мало или нет <span>!</span></div></article>
-          <article class="metric-card metric-ops"><div class="metric-label">За смену</div><div class="metric-value" id="metricOps">0</div><div class="metric-foot">операций <span>⌁</span></div></article>
+          <button class="metric-card metric-total" type="button" data-dashboard-action="catalog" aria-label="Открыть весь каталог"><div class="metric-label">В каталоге</div><div class="metric-value" id="metricProducts">0</div><div class="metric-foot">активных позиций <span>↗</span></div></button>
+          <button class="metric-card metric-alert" type="button" data-dashboard-action="attention" aria-label="Открыть товары, требующие контроля"><div class="metric-label">Нужен контроль</div><div class="metric-value" id="metricAlerts">0</div><div class="metric-foot">мало или нет <span>!</span></div></button>
+          <button class="metric-card metric-ops" type="button" data-dashboard-action="reports" aria-label="Открыть операции за смену"><div class="metric-label">За смену</div><div class="metric-value" id="metricOps">0</div><div class="metric-foot">операций <span>⌁</span></div></button>
         </div>
 
         <div class="section-heading"><div><p class="eyebrow">Визуальный контроль</p><h2>Состояние склада</h2></div><span class="section-count" id="stockCountLabel">0 позиций</span></div>
@@ -85,7 +85,7 @@
         </div>
         <div class="advanced-filters" id="advancedFilters" aria-label="Расширенные фильтры">
           <label>Длина<select id="lengthFilter"><option value="all">Любая длина</option><option value="3000">3 м · 3000 мм</option><option value="4000">4 м · 4000 мм</option></select></label>
-          <label>Наличие<select id="availabilityFilter"><option value="all">Любое</option><option value="in">В наличии</option><option value="low">Мало</option><option value="out">Нет</option></select></label>
+          <label>Наличие<select id="availabilityFilter"><option value="all">Любое</option><option value="in">В наличии</option><option value="low">Мало</option><option value="out">Нет</option><option value="attention">Нужен контроль</option></select></label>
           <label>Статус<select id="statusFilter"><option value="active">Активные</option><option value="all">Все позиции</option><option value="order">Под заказ</option><option value="reserved">С резервом</option><option value="archived">Архив</option></select></label>
           <button class="reset-filters hidden" id="resetFiltersBtn" type="button">Сбросить расширенные фильтры</button>
         </div>
