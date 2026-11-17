@@ -231,7 +231,7 @@ function renderCatalog() {
     const status = getStatus(product).key;
     const available = getAvailable(product);
     const quick = catalogQuickFilter;
-    const quickOk = quick === 'all' || (quick === 'out' && available === 0) || (quick === 'low' && available > 0 && available <= 10) || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
+    const quickOk = quick === 'all' || (quick === 'favorites' && Boolean(product.favorite)) || (quick === 'out' && available === 0) || (quick === 'low' && available > 0 && available <= 10) || (quick === '4m' && product.category === 'Панель' && Number(product.length) >= 4000) || (quick === 'louvers' && product.category === 'Лувер') || (quick === 'recent' && Date.now() - new Date(product.updatedAt || 0).getTime() < 7 * 86400000);
     const lengthOk = catalogFilters.length === 'all' || Number(product.length) === Number(catalogFilters.length);
     const availabilityOk = catalogFilters.availability === 'all' || (catalogFilters.availability === 'in' && available > 10) || (catalogFilters.availability === 'low' && available > 0 && available <= 10) || (catalogFilters.availability === 'out' && available === 0) || (catalogFilters.availability === 'attention' && available <= 10);
     const statusOk = catalogFilters.status === 'all' || (catalogFilters.status === 'active' && !product.retired) || (catalogFilters.status === 'order' && !product.retired && (product.orderOnly || Number(product.length) >= 4000)) || (catalogFilters.status === 'reserved' && !product.retired && Number(product.reserved || 0) > 0) || (catalogFilters.status === 'archived' && Boolean(product.retired));
@@ -248,7 +248,7 @@ function renderCatalog() {
   $('#catalogList').innerHTML = products.map((product) => {
     const status = getStatus(product);
     return `<article class="catalog-card status-${status.key} ${product.retired ? 'retired' : ''}" data-product-id="${escapeHtml(product.id)}">
-      <div class="catalog-card-top"><div><div class="catalog-code">${escapeHtml(product.sku)}</div><div class="catalog-name">${escapeHtml(product.name)}</div></div>${product.retired ? '<span class="retired-label">СНЯТО</span>' : `<span class="status-badge status-${status.key}">${escapeHtml(status.short)}</span>`}</div>
+      <div class="catalog-card-top"><div><div class="catalog-code">${escapeHtml(product.sku)}</div><div class="catalog-name">${escapeHtml(product.name)}</div></div><div class="catalog-card-tools"><button class="favorite-button ${product.favorite ? 'is-favorite' : ''}" type="button" data-action="favorite" aria-label="${product.favorite ? 'Убрать из избранного' : 'Добавить в избранное'}" aria-pressed="${Boolean(product.favorite)}">${product.favorite ? '★' : '☆'}</button>${product.retired ? '<span class="retired-label">СНЯТО</span>' : `<span class="status-badge status-${status.key}">${escapeHtml(status.short)}</span>`}</div></div>
       <div class="catalog-meta"><div class="catalog-tags"><span class="tag">${escapeHtml(product.category)}</span><span class="tag">${Number(product.length) >= 4000 ? '4 м' : '3 м'}</span><span class="tag">Дост. ${getAvailable(product)} · Рез. ${Number(product.reserved || 0)}</span></div>${product.retired ? '' : `<div class="stock-edit"><button data-stock-delta="-1" aria-label="Уменьшить остаток">−</button><input data-stock-input type="number" min="0" value="${Math.max(0, Number(product.stock) || 0)}" aria-label="Остаток ${escapeHtml(product.sku)}" /><button data-stock-delta="1" aria-label="Увеличить остаток">+</button></div>`}</div>
       <div class="catalog-location">${escapeHtml(getLocation(product))}</div><div class="catalog-actions">${product.retired ? `<button class="mini-button" data-action="restore">↻ Вернуть в каталог</button>` : `<button class="mini-button" data-action="edit">Редактировать</button><button class="mini-button retire" data-action="retire">Снять с производства</button>`}</div>
     </article>`;
@@ -441,6 +441,15 @@ function handleCatalogClick(event) {
   const product = getProduct(card.dataset.productId);
   if (!product) return;
   const action = event.target.closest('[data-action]')?.dataset.action;
+  if (action === 'favorite') {
+    captureUndo();
+    product.favorite = !product.favorite;
+    product.updatedAt = Date.now();
+    saveState();
+    renderCatalog();
+    showToast(product.favorite ? 'Добавлено в избранное' : 'Удалено из избранного', 'success', true);
+    return;
+  }
   if (action === 'edit') return openEditor(product.id);
   if (action === 'retire') {
     if (confirm(`Снять «${product.sku}» с производства? Позиция останется в архиве.`)) {
@@ -914,7 +923,7 @@ const buttonHelpById = {
 };
 function initButtonHints() {
   const modeHints = { check: 'Показать остаток без изменения базы', in: 'Добавить поступление к остатку', out: 'Оформить расход и уменьшить доступный остаток', writeoff: 'Списать товар на замер и записать операцию' };
-  const filterHints = { all: 'Показать все активные позиции', out: 'Показать позиции без доступного остатка', low: 'Показать позиции с малым остатком', '4m': 'Показать панели длиной 4 метра', louvers: 'Показать только луверы', recent: 'Показать изменённые за последние 7 дней' };
+  const filterHints = { all: 'Показать все активные позиции', favorites: 'Показать избранные позиции', out: 'Показать позиции без доступного остатка', low: 'Показать позиции с малым остатком', '4m': 'Показать панели длиной 4 метра', louvers: 'Показать только луверы', recent: 'Показать изменённые за последние 7 дней' };
   const viewHints = { scanner: 'Перейти к сканеру и быстрому контролю', catalog: 'Открыть каталог товаров и фильтры', reports: 'Открыть отчёты и журнал операций' };
   $$('button').forEach((button) => {
     let hint = buttonHelpById[button.id] || button.dataset.help || '';
