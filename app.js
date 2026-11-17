@@ -32,6 +32,8 @@ let pendingScan = null;
 let torchEnabled = false;
 let torchTrack = null;
 let toastTimer = null;
+let undoTimer = null;
+let undoSnapshot = null;
 let activeScanMode = 'check';
 const scanModeHelp = { check: 'Только покажет остаток. Количество на складе не изменится.', in: 'Добавит поступившее количество к фактическому остатку.', out: 'Уменьшит остаток. Нельзя списать больше, чем доступно без резерва.', writeoff: 'Уменьшит остаток и запишет списание товара на замер.' };
 let catalogQuickFilter = 'all';
@@ -303,11 +305,33 @@ function closeBackdrop(id) {
   if ($$('.modal-backdrop:not(.hidden)').length === 0) document.body.style.overflow = '';
 }
 
-function showToast(message, tone = 'success') {
+function captureUndo() {
+  undoSnapshot = JSON.stringify(state);
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { undoSnapshot = null; }, 5000);
+}
+
+function undoLastAction() {
+  if (!undoSnapshot) return;
+  try {
+    state = JSON.parse(undoSnapshot);
+    undoSnapshot = null;
+    clearTimeout(undoTimer);
+    saveState();
+    renderAll();
+    showToast('Последнее действие отменено');
+  } catch (_) {
+    showToast('Не удалось отменить действие', 'error');
+  }
+}
+
+function showToast(message, tone = 'success', canUndo = false) {
   const toast = $('#toast');
   $('#toastMessage').textContent = message;
   $('.toast-icon', toast).textContent = tone === 'error' ? '!' : '✓';
   $('.toast-icon', toast).style.color = tone === 'error' ? 'var(--red)' : 'var(--green)';
+  const undoButton = $('#toastUndoBtn');
+  undoButton.classList.toggle('hidden', !canUndo || !undoSnapshot);
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
@@ -350,13 +374,14 @@ function addOperationFromModal() {
     showToast(`Недостаточно остатка: доступно ${getAvailable(product)} шт.`, 'error');
     return;
   }
+  captureUndo();
   product.stock = Math.max(0, Number(product.stock || 0) + (type === 'in' ? qty : -qty));
   product.updatedAt = Date.now();
   state.operations.push({ id: `op-${Date.now()}`, productId: product.id, sku: product.sku, name: product.name, category: product.category, length: product.length, qty, type, comment, createdAt: new Date().toISOString(), stockAfter: product.stock });
   saveState();
   closeBackdrop('modalBackdrop');
   renderAll();
-  showToast(`${operationLabels[type]} добавлен: ${product.sku}`);
+  showToast(`${operationLabels[type]} добавлен: ${product.sku}`, 'success', true);
 }
 
 function openEditor(productId = null) {
@@ -397,11 +422,13 @@ function submitProductForm(event) {
   if (!data.sku || !data.name) { showToast('Заполните артикул и название', 'error'); return; }
   if (id) {
     const product = getProduct(id);
+    captureUndo();
     Object.assign(product, data);
-    showToast('Позиция обновлена');
+    showToast('Позиция обновлена', 'success', true);
   } else {
+    captureUndo();
     state.products.push({ id: `p-${Date.now()}`, ...data, retired: false });
-    showToast('Новая позиция добавлена');
+    showToast('Новая позиция добавлена', 'success', true);
   }
   saveState();
   closeBackdrop('editorModal');
@@ -417,17 +444,18 @@ function handleCatalogClick(event) {
   if (action === 'edit') return openEditor(product.id);
   if (action === 'retire') {
     if (confirm(`Снять «${product.sku}» с производства? Позиция останется в архиве.`)) {
-      product.retired = true; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция перенесена в архив');
+      captureUndo(); product.retired = true; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция перенесена в архив', 'success', true);
     }
     return;
   }
   if (action === 'restore') {
-    product.retired = false; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция возвращена в каталог');
+    captureUndo(); product.retired = false; product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Позиция возвращена в каталог', 'success', true);
   }
   if (event.target.closest('[data-stock-delta]')) {
     const delta = Number(event.target.closest('[data-stock-delta]').dataset.stockDelta);
+    captureUndo();
     product.stock = Math.max(0, Number(product.stock || 0) + delta);
-    product.updatedAt = Date.now(); saveState(); renderAll();
+    product.updatedAt = Date.now(); saveState(); renderAll(); showToast('Остаток изменён', 'success', true);
   }
 }
 
@@ -436,10 +464,11 @@ function handleCatalogStockInput(event) {
   const card = event.target.closest('[data-product-id]');
   const product = getProduct(card?.dataset.productId);
   if (!product) return;
+  captureUndo();
   product.stock = Math.max(0, Math.floor(Number(event.target.value) || 0));
   product.updatedAt = Date.now();
   saveState();
-  renderMetrics(); renderStatusStrip(); renderRecent(); renderReports();
+  renderMetrics(); renderStatusStrip(); renderRecent(); renderReports(); showToast('Остаток изменён', 'success', true);
 }
 
 function renderSearchResults() {
@@ -860,7 +889,8 @@ const buttonHelpById = {
   manualCodeBtn: 'Найти товар по коду без камеры',
   zoomInBtn: 'Увеличить изображение камеры',
   zoomOutBtn: 'Уменьшить изображение камеры',
-  enhanceBtn: 'Включить или выключить усиление контраста и резкости'
+  enhanceBtn: 'Включить или выключить усиление контраста и резкости',
+  toastUndoBtn: 'Отменить последнее изменение'
 };
 function initButtonHints() {
   const modeHints = { check: 'Показать остаток без изменения базы', in: 'Добавить поступление к остатку', out: 'Оформить расход и уменьшить доступный остаток', writeoff: 'Списать товар на замер и записать операцию' };
@@ -908,6 +938,7 @@ function initButtonHints() {
 function initEvents() {
   initButtonHints();
   applyTheme();
+  $('#toastUndoBtn').addEventListener('click', undoLastAction);
   $$('.nav-item').filter((item) => item.dataset.view).forEach((item) => item.addEventListener('click', () => setActiveView(item.dataset.view)));
   $('#themeToggleBtn').addEventListener('click', toggleTheme);
   $('#view-scanner').addEventListener('click', (event) => {
